@@ -85,9 +85,12 @@ test.describe("UX-26: Launches List High-Density Table Layout and Row Height Ver
     const table = page.locator("table");
     await expect(table).toBeVisible();
 
-    // Verify table has table-fixed and space for the consistently labeled actions
+    // The dense layout must still fit at the common 1440px desktop viewport.
     await expect(table).toHaveClass(/table-fixed/);
-    await expect(table).toHaveClass(/min-w-\[1200px\]/);
+    const overflowContainer = page.locator("div.overflow-x-auto").first();
+    const scrollWidth = await overflowContainer.evaluate((el) => el.scrollWidth);
+    const clientWidth = await overflowContainer.evaluate((el) => el.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
     // Verify row height is controlled and doesn't exceed 64px
     const row = table.locator("tbody tr").first();
@@ -133,7 +136,7 @@ test.describe("UX-26: Launches List High-Density Table Layout and Row Height Ver
     const scrollWidth = await overflowContainer.evaluate((el) => el.scrollWidth);
     const clientWidth = await overflowContainer.evaluate((el) => el.clientWidth);
 
-    // At 1024px viewport (minus sidebar), the 1200px table triggers horizontal scrolling
+    // At 1024px viewport (minus sidebar), the 1132px table triggers horizontal scrolling
     expect(scrollWidth).toBeGreaterThan(clientWidth);
 
     // Row height should still remain stable under 64px even on narrow viewport

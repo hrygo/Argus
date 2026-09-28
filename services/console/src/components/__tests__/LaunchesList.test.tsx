@@ -91,7 +91,7 @@ describe("LaunchesList High-Density Table & Information Hierarchy (Issue #26)", 
 
     const table = screen.getByRole("table");
     expect(table).toHaveClass("table-fixed");
-    expect(table).toHaveClass("min-w-[1200px]");
+    expect(table).toHaveClass("min-w-[1132px]");
 
     // Simplified headers without long verbose titles
     expect(screen.getByRole("columnheader", { name: "Launch" })).toBeInTheDocument();

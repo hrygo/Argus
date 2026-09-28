@@ -16,6 +16,8 @@ import { formatApiError } from "../../api/errors";
 import { StatusBadge } from "../../components/StatusBadge";
 import { QualityBadge } from "../../components/QualityBadge";
 import { EmptyState, ErrorState, LoadingState } from "../../components/StateViews";
+import { SyncStatusBadge } from "../../components/SyncStatusBadge";
+import { Button, buttonClassName, PageHeader, Panel, SelectInput, TextInput } from "../../components/ui/Primitives";
 
 type LaunchResponse = import("../../api/schema").components["schemas"]["ExperimentLaunchResponse"];
 type AgentSummary = import("../../api/schema").components["schemas"]["AgentSummaryResponse"];
@@ -135,57 +137,45 @@ export const LaunchesList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">评测发射台 (Experiment Launches)</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            查看、检索与触发 Agent 自动化评测任务，所有历史记录均严格锁定不可变快照 (Frozen Manifest)。
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-2 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-            title="刷新列表"
-          >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin text-indigo-600" : ""}`} />
-          </button>
-          <Link
-            to="/launches/new"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>新建评测 (New Evaluation)</span>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="评测发射台 (Experiment Launches)"
+        description="查看、检索与触发 Agent 自动化评测任务，所有历史记录均严格锁定不可变快照 (Frozen Manifest)。"
+        actions={(
+          <>
+            <Button variant="secondary" onClick={() => refetch()} disabled={isFetching} aria-label="刷新列表">
+              <RefreshCw aria-hidden="true" className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+            </Button>
+            <Link to="/launches/new" className={buttonClassName("primary")}>
+              <Plus aria-hidden="true" className="size-4" />
+              <span>新建评测</span>
+            </Link>
+          </>
+        )}
+      />
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-3 text-xs">
-        <div className="flex items-center gap-1.5 text-slate-400 font-semibold uppercase tracking-wider text-[11px] mr-1">
+      <div className="ui-panel flex flex-wrap items-center gap-2.5 p-3 text-xs">
+        <div className="flex items-center gap-1.5 text-muted-foreground font-semibold uppercase tracking-wider text-[11px] mr-1">
           <Filter className="w-3.5 h-3.5" />
           <span>过滤筛选:</span>
         </div>
 
         {/* Agent Filter */}
         <div className="relative min-w-[180px]">
-          <input
+          <TextInput
             type="text"
             placeholder="按 Agent ID 过滤..."
             value={filterAgent}
             onChange={(e) => setFilterAgent(e.target.value)}
-            className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800"
+            className="w-full text-xs"
           />
         </div>
 
         {/* Status Filter */}
-        <select
+        <SelectInput
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
+          className="w-auto min-w-[170px] text-xs"
         >
           <option value="">全部执行状态 (Status)</option>
           {LAUNCH_STATUSES.map((status) => (
@@ -193,31 +183,33 @@ export const LaunchesList: React.FC = () => {
               {LAUNCH_STATUS_LABELS[status]}
             </option>
           ))}
-        </select>
+        </SelectInput>
 
         {/* Quality Filter */}
-        <select
+        <SelectInput
           value={filterQuality}
           onChange={(e) => setFilterQuality(e.target.value)}
-          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
+          className="w-auto min-w-[170px] text-xs"
         >
           <option value="">全部质量结论 (Quality)</option>
           <option value="pass">PASS (通过)</option>
           <option value="fail">FAIL (未通过)</option>
           <option value="unknown">UNKNOWN (未知/未测)</option>
-        </select>
+        </SelectInput>
 
         {(filterAgent || filterStatus || filterQuality) && (
-          <button
+          <Button
+            type="button"
+            variant="quiet"
             onClick={() => {
               setFilterAgent("");
               setFilterStatus("");
               setFilterQuality("");
             }}
-            className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline ml-auto"
+            className="ml-auto min-h-7 px-2 text-xs underline underline-offset-2"
           >
             重置筛选
-          </button>
+          </Button>
         )}
       </div>
 
@@ -236,7 +228,7 @@ export const LaunchesList: React.FC = () => {
           action={
             <Link
               to="/launches/new"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg"
+              className={buttonClassName("primary", "text-xs")}
             >
               <Rocket className="w-3.5 h-3.5" />
               <span>新建评测</span>
@@ -246,44 +238,44 @@ export const LaunchesList: React.FC = () => {
       )}
 
       {!isLoading && !error && launches && launches.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+        <Panel className="ui-table-shell">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px] table-fixed text-left text-sm text-slate-600">
+            <table className="ui-table min-w-[1132px] table-fixed text-sm text-foreground-secondary">
               <colgroup>
-                <col className="w-[150px]" />
-                <col className="w-[180px]" />
+                <col className="w-[136px]" />
+                <col className="w-[170px]" />
+                <col className="w-[145px]" />
                 <col className="w-[155px]" />
-                <col className="w-[165px]" />
-                <col className="w-[90px]" />
-                <col className="w-[100px]" />
-                <col className="w-[160px]" />
-                <col className="w-[200px]" />
+                <col className="w-[84px]" />
+                <col className="w-[118px]" />
+                <col className="w-[144px]" />
+                <col className="w-[180px]" />
               </colgroup>
-              <thead className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <thead className="bg-surface-muted border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-2.5">Launch</th>
-                  <th className="px-4 py-2.5">Agent</th>
-                  <th className="px-4 py-2.5">Dataset</th>
-                  <th className="px-4 py-2.5">状态</th>
-                  <th className="px-4 py-2.5">质量</th>
-                  <th className="px-4 py-2.5">Langfuse</th>
-                  <th className="px-4 py-2.5">创建时间</th>
-                  <th className="px-4 py-2.5 text-right">操作</th>
+                  <th className="px-3 py-2.5">Launch</th>
+                  <th className="px-3 py-2.5">Agent</th>
+                  <th className="px-3 py-2.5">Dataset</th>
+                  <th className="px-3 py-2.5">状态</th>
+                  <th className="px-3 py-2.5">质量</th>
+                  <th className="px-3 py-2.5">Langfuse</th>
+                  <th className="px-3 py-2.5">创建时间</th>
+                  <th className="px-3 py-2.5 text-right">操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {launches.map((launch) => {
                   const agentName = agentNameById.get(launch.agent_id);
                   const isCopied = copiedLaunchId === launch.id;
 
                   return (
-                    <tr key={launch.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={launch.id} className="hover:bg-surface-muted/80 transition-colors">
                       {/* Launch ID */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <div className="flex min-w-0 items-center gap-1.5">
                           <Link
                             to={`/launches/${launch.id}`}
-                            className="min-w-0 flex-1 truncate font-mono text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline block"
+                            className="min-w-0 flex-1 truncate font-mono text-xs font-bold text-primary hover:text-primary-strong hover:underline block"
                             title={launch.id}
                           >
                             {launch.id}
@@ -291,7 +283,7 @@ export const LaunchesList: React.FC = () => {
                           <button
                             type="button"
                             onClick={(e) => handleCopyId(launch.id, e)}
-                            className="size-7 shrink-0 inline-flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                            className="size-7 shrink-0 inline-flex items-center justify-center text-muted-foreground hover:text-foreground-secondary hover:bg-surface-muted rounded-md transition-colors cursor-pointer"
                             title={isCopied ? "已复制" : "复制完整 Launch ID"}
                             aria-label={`复制 Launch ID ${launch.id}`}
                           >
@@ -305,22 +297,22 @@ export const LaunchesList: React.FC = () => {
                       </td>
 
                       {/* Agent */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <div className="min-w-0 text-xs">
                           <div className="flex min-w-0 items-center gap-1.5">
                             <span
-                              className="min-w-0 flex-1 truncate font-semibold text-slate-900"
+                              className="min-w-0 flex-1 truncate font-semibold text-foreground"
                               title={agentName || launch.agent_id}
                             >
                               {agentName || launch.agent_id}
                             </span>
-                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[10px] whitespace-nowrap">
+                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-muted text-foreground-secondary font-mono text-[10px] whitespace-nowrap">
                               {launch.agent_version}
                             </span>
                           </div>
                           {agentName && agentName !== launch.agent_id && (
                             <div
-                              className="truncate font-mono text-[11px] text-slate-400 mt-0.5"
+                              className="truncate font-mono text-[11px] text-muted-foreground mt-0.5"
                               title={launch.agent_id}
                             >
                               {launch.agent_id}
@@ -330,16 +322,16 @@ export const LaunchesList: React.FC = () => {
                       </td>
 
                       {/* Dataset */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <div className="min-w-0 text-xs">
                           <span
-                            className="min-w-0 block truncate font-semibold text-slate-800"
+                            className="min-w-0 block truncate font-semibold text-foreground"
                             title={launch.dataset_name}
                           >
                             {launch.dataset_name}
                           </span>
                           <span
-                            className="text-slate-400 font-mono text-[11px] block truncate mt-0.5"
+                            className="text-muted-foreground font-mono text-[11px] block truncate mt-0.5"
                             title={launch.dataset_version || ""}
                           >
                             {launch.dataset_version || "-"}
@@ -348,12 +340,12 @@ export const LaunchesList: React.FC = () => {
                       </td>
 
                       {/* Status + Progress (Contained within 165px column, overflow safe) */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <div className="flex min-w-0 items-center gap-1.5">
                           <StatusBadge status={launch.status} />
                           {launch.progress && launch.progress.total > 0 && (
                             <span
-                              className="min-w-0 truncate font-mono text-[11px] text-slate-500"
+                              className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
                               title={`${launch.progress.percentage}% · ${launch.progress.completed}/${launch.progress.total}`}
                             >
                               {launch.progress.percentage}% · {launch.progress.completed}/{launch.progress.total}
@@ -363,40 +355,30 @@ export const LaunchesList: React.FC = () => {
                       </td>
 
                       {/* Quality */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2.5 whitespace-nowrap">
                         <QualityBadge quality={launch.quality_conclusion} />
                       </td>
 
                       {/* Langfuse */}
-                      <td className="px-4 py-3 text-xs font-mono whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap ${
-                            launch.langfuse_sync_status === "SYNCED"
-                              ? "bg-purple-50 text-purple-700 border border-purple-200"
-                              : launch.langfuse_sync_status === "FAILED"
-                              ? "bg-rose-50 text-rose-700 border border-rose-200"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {launch.langfuse_sync_status || "PENDING"}
-                        </span>
+                      <td className="px-3 py-2.5 text-xs font-mono whitespace-nowrap">
+                        <SyncStatusBadge status={launch.langfuse_sync_status} />
                       </td>
 
                       {/* Created At */}
                       <td
-                        className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap truncate"
+                        className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap truncate"
                         title={new Date(launch.created_at).toLocaleString("zh-CN", { hour12: false })}
                       >
                         {new Date(launch.created_at).toLocaleString("zh-CN", { hour12: false })}
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             to={`/launches/${launch.id}`}
                             aria-label={`查看 Launch ${launch.id} 详情`}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                            className="text-xs font-semibold text-primary hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded"
                           >
                             详情
                           </Link>
@@ -406,7 +388,7 @@ export const LaunchesList: React.FC = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label="在 Langfuse 中查看"
-                              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded"
                               title="在 Langfuse UI 中查看"
                             >
                               Langfuse
@@ -414,7 +396,7 @@ export const LaunchesList: React.FC = () => {
                             </a>
                           ) : (
                             <span
-                              className="text-xs text-slate-400"
+                              className="text-xs text-muted-foreground"
                               title={launch.langfuse_experiment_url ? "Langfuse 地址无效" : "尚未创建 Langfuse 链接"}
                             >
                               Langfuse 未就绪
@@ -428,7 +410,7 @@ export const LaunchesList: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   );

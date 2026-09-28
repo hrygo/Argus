@@ -96,15 +96,15 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div className="flex items-center gap-2 text-slate-800">
-            <Layers className="w-5 h-5 text-indigo-600" />
+      <div className="bg-surface rounded-xl shadow-xl border border-border w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div className="flex items-center gap-2 text-foreground">
+            <Layers className="w-5 h-5 text-primary" />
             <h2 className="text-base font-bold">创建 AgentVersion 规格快照</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100 transition-colors"
+            className="text-muted-foreground hover:text-foreground-secondary rounded-lg p-1 hover:bg-surface-muted transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -120,7 +120,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-slate-700">
+                <label className="text-xs font-semibold text-foreground-secondary">
                   版本号 (Tag) <span className="text-rose-500">*</span>
                 </label>
                 <FieldHelp {...AGENT_VERSION_FIELD_HELPS.version} />
@@ -131,14 +131,14 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                 placeholder="e.g. 1.0.0 或 v2"
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
+                className="ui-control w-full text-sm font-mono"
               />
-              <p className="text-[11px] text-slate-400 mt-1">创建后将永久冻结且不可变</p>
+              <p className="text-[11px] text-muted-foreground mt-1">创建后将永久冻结且不可变</p>
             </div>
 
             <div>
               <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-slate-700">运行环境</label>
+                <label className="text-xs font-semibold text-foreground-secondary">运行环境</label>
                 <FieldHelp {...AGENT_VERSION_FIELD_HELPS.environment} placement="bottom-right" />
               </div>
               <input
@@ -146,14 +146,14 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                 placeholder="e.g. production / staging"
                 value={environment}
                 onChange={(e) => setEnvironment(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="ui-control w-full text-sm"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center gap-1.5 mb-1">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-foreground-secondary">
                 远程调用端点 (HTTP POST) <span className="text-rose-500">*</span>
               </label>
               <FieldHelp {...AGENT_VERSION_FIELD_HELPS.endpoint} />
@@ -164,56 +164,56 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
               placeholder="http://agent-host:8080/invoke"
               value={endpoint}
               onChange={(e) => setEndpoint(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
+              className="ui-control w-full text-sm font-mono"
             />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">超时时间 (秒)</label>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1">超时时间 (秒)</label>
               <input
                 type="number"
                 min={1}
                 max={600}
                 value={timeoutSeconds}
                 onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg font-mono"
+                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">最大重试次数</label>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1">最大重试次数</label>
               <input
                 type="number"
                 min={0}
                 max={10}
                 value={maxRetries}
                 onChange={(e) => setMaxRetries(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg font-mono"
+                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">最大并发数</label>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1">最大并发数</label>
               <input
                 type="number"
                 min={1}
                 max={50}
                 value={maxConcurrency}
                 onChange={(e) => setMaxConcurrency(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg font-mono"
+                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">每分钟限流 (RPM)</label>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1">每分钟限流 (RPM)</label>
               <input
                 type="number"
                 min={1}
                 max={10000}
                 value={rateLimitPerMinute}
                 onChange={(e) => setRateLimitPerMinute(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg font-mono"
+                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
               />
             </div>
           </div>
@@ -221,7 +221,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-slate-700">凭据引用 (SecretRef)</label>
+                <label className="text-xs font-semibold text-foreground-secondary">凭据引用 (SecretRef)</label>
                 <FieldHelp {...AGENT_VERSION_FIELD_HELPS.credentialRef} />
               </div>
               <input
@@ -229,14 +229,14 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                 placeholder="env://API_TOKEN 或 vault://path"
                 value={credentialRef}
                 onChange={(e) => setCredentialRef(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg font-mono"
+                className="w-full px-3 py-2 text-sm border border-border-strong rounded-lg font-mono"
               />
-              <p className="text-[11px] text-slate-400 mt-1">仅存储引用标识，禁止存入明文 Secret</p>
+              <p className="text-[11px] text-muted-foreground mt-1">仅存储引用标识，禁止存入明文 Secret</p>
             </div>
 
             <div>
               <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-slate-700">产物标识 (ArtifactRef)</label>
+                <label className="text-xs font-semibold text-foreground-secondary">产物标识 (ArtifactRef)</label>
                 <FieldHelp {...AGENT_VERSION_FIELD_HELPS.artifactRef} placement="bottom-right" />
               </div>
               <input
@@ -244,23 +244,23 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                 placeholder="git commit SHA 或 docker image digest"
                 value={artifactRef}
                 onChange={(e) => setArtifactRef(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg font-mono"
+                className="w-full px-3 py-2 text-sm border border-border-strong rounded-lg font-mono"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center gap-1.5 mb-1">
-              <label className="text-xs font-semibold text-slate-700">请求映射关系 (Request Mapping JSON)</label>
+              <label className="text-xs font-semibold text-foreground-secondary">请求映射关系 (Request Mapping JSON)</label>
               <FieldHelp {...AGENT_VERSION_FIELD_HELPS.requestMapping} placement="top-left" />
             </div>
             <textarea
               rows={3}
               value={requestMappingStr}
               onChange={(e) => setRequestMappingStr(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="ui-control w-full text-xs font-mono"
             />
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-muted-foreground mt-1">
               点路径映射关系，例如：{`{"query": "input.user_message"}`}
             </p>
           </div>
@@ -271,25 +271,25 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
               id="is_idempotent"
               checked={isIdempotent}
               onChange={(e) => setIsIdempotent(e.target.checked)}
-              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-border-strong text-primary focus:ring-focus"
             />
-            <label htmlFor="is_idempotent" className="text-xs text-slate-700 select-none">
+            <label htmlFor="is_idempotent" className="text-xs text-foreground-secondary select-none">
               该端点为幂等调用（发生 Read Timeout 时允许根据策略重试）
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>{mutation.isPending ? "创建中..." : "确认创建版本"}</span>

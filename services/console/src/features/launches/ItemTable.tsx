@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Clock, Eye, Filter, Layers } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { QualityBadge } from "../../components/QualityBadge";
+import { Button, Panel } from "../../components/ui/Primitives";
 import { AttemptDrawer } from "./AttemptDrawer";
 
 type ItemExecution = import("../../api/schema").components["schemas"]["ExperimentItemExecutionResponse"];
@@ -34,91 +35,85 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
       {/* Table Sub-header & Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-indigo-600" />
-          <h3 className="text-sm font-bold text-slate-900">
+          <Layers className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold text-foreground">
             评测用例明细 (Dataset Items & Evaluations)
           </h3>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted-foreground">
             共 {items.length} 个用例
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <button
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter aria-hidden="true" className="w-3.5 h-3.5 text-muted-foreground" />
+          <Button
+            type="button"
+            variant={filterQuality === "ALL" ? "primary" : "secondary"}
+            aria-pressed={filterQuality === "ALL"}
             onClick={() => setFilterQuality("ALL")}
-            className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-              filterQuality === "ALL"
-                ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
+            className="min-h-7 px-2.5 py-1 text-xs"
           >
             全部 ({items.length})
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant={filterQuality === "PASS" ? "primary" : "secondary"}
+            aria-pressed={filterQuality === "PASS"}
             onClick={() => setFilterQuality("PASS")}
-            className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-              filterQuality === "PASS"
-                ? "bg-emerald-600 text-white"
-                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-            }`}
+            className="min-h-7 px-2.5 py-1 text-xs"
           >
             质量通过 ({items.filter((i) => i.quality_conclusion?.toLowerCase() === "pass").length})
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant={filterQuality === "FAIL" ? "primary" : "secondary"}
+            aria-pressed={filterQuality === "FAIL"}
             onClick={() => setFilterQuality("FAIL")}
-            className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-              filterQuality === "FAIL"
-                ? "bg-rose-600 text-white"
-                : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-            }`}
+            className="min-h-7 px-2.5 py-1 text-xs"
           >
             未通过 ({items.filter((i) => i.quality_conclusion?.toLowerCase() === "fail").length})
-          </button>
+          </Button>
           {failedCount > 0 && (
-            <button
+            <Button
+              type="button"
+              variant={filterQuality === "FAILED" ? "primary" : "secondary"}
+              aria-pressed={filterQuality === "FAILED"}
               onClick={() => setFilterQuality("FAILED")}
-              className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-                filterQuality === "FAILED"
-                  ? "bg-amber-600 text-white"
-                  : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-              }`}
+              className="min-h-7 px-2.5 py-1 text-xs"
             >
               失败/超时 ({failedCount})
-            </button>
+            </Button>
           )}
           {retryWaitCount > 0 && (
-            <button
+            <Button
+              type="button"
+              variant={filterQuality === "RETRY_WAIT" ? "primary" : "secondary"}
+              aria-pressed={filterQuality === "RETRY_WAIT"}
               onClick={() => setFilterQuality("RETRY_WAIT")}
-              className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-                filterQuality === "RETRY_WAIT"
-                  ? "bg-yellow-600 text-white"
-                  : "bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-              }`}
+              className="min-h-7 px-2.5 py-1 text-xs"
             >
               等待重试 ({retryWaitCount})
-            </button>
+            </Button>
           )}
           {cancelledCount > 0 && (
-            <button
+            <Button
+              type="button"
+              variant={filterQuality === "CANCELLED" ? "primary" : "secondary"}
+              aria-pressed={filterQuality === "CANCELLED"}
               onClick={() => setFilterQuality("CANCELLED")}
-              className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-                filterQuality === "CANCELLED"
-                  ? "bg-gray-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className="min-h-7 px-2.5 py-1 text-xs"
             >
               已取消 ({cancelledCount})
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+      <Panel className="ui-table-shell">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <table className="ui-table min-w-[1200px] text-sm text-foreground-secondary">
+            <thead className="bg-canvas/75 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               <tr>
                 <th className="px-5 py-3.5">用例标识 (Dataset Item ID)</th>
                 <th className="px-5 py-3.5">执行状态 (Execution)</th>
@@ -130,20 +125,20 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                 <th className="px-5 py-3.5 text-right">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {filteredItems.map((item) => {
                 const errorText = item.execution_error || item.eval_error;
 
                 return (
                   <tr
                     key={item.id}
-                    className="hover:bg-slate-50/80 transition-colors"
+                    className="hover:bg-surface-muted/80 transition-colors"
                   >
-                    <td className="px-5 py-3.5 font-mono text-xs font-bold text-slate-900">
+                    <td className="px-5 py-3.5 font-mono text-xs font-bold text-foreground">
                       <div className="flex items-center gap-1.5">
                         <span>{item.dataset_item_id}</span>
                         {item.dispatch_generation && item.dispatch_generation > 1 && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary-subtle text-primary-strong border border-primary-border">
                             gen #{item.dispatch_generation}
                           </span>
                         )}
@@ -169,9 +164,9 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                           {Object.entries(item.scores).map(([k, v]) => (
                             <span
                               key={k}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-700 border border-slate-200"
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-surface-muted text-foreground-secondary border border-border"
                             >
-                              <span className="text-slate-400 mr-1">{k}:</span>
+                              <span className="text-muted-foreground mr-1">{k}:</span>
                               <span
                                 className={`font-semibold ${
                                   Number(v) >= 1
@@ -187,7 +182,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400 font-mono">-</span>
+                        <span className="text-xs text-muted-foreground font-mono">-</span>
                       )}
                     </td>
 
@@ -204,44 +199,48 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                           {item.final_attempt_http_status}
                         </span>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </td>
 
-                    <td className="px-5 py-3.5 font-mono text-xs text-slate-500">
+                    <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
                       {item.final_attempt_latency_ms !== null &&
                       item.final_attempt_latency_ms !== undefined ? (
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                           <span>{item.final_attempt_latency_ms} ms</span>
                         </span>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </td>
 
                     <td className="px-5 py-3.5">
-                      <button
+                      <Button
+                        type="button"
+                        variant="secondary"
                         onClick={() =>
                           setSelectedItem({ id: item.id, caseId: item.dataset_item_id })
                         }
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer"
+                        className="min-h-7 px-2.5 py-1 text-xs font-mono"
                         title="查看 Attempt 调用历史"
                       >
                         <span>{item.attempt_count} 次尝试</span>
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                        <Eye aria-hidden="true" className="h-3.5 w-3.5" />
+                      </Button>
                     </td>
 
                     <td className="px-5 py-3.5 text-right">
-                      <button
+                      <Button
+                        type="button"
+                        variant="quiet"
                         onClick={() =>
                           setSelectedItem({ id: item.id, caseId: item.dataset_item_id })
                         }
-                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                        className="min-h-7 px-2 text-xs"
                       >
                         明细
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -249,7 +248,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
 
       {/* Attempt Drawer Modal */}
       <AttemptDrawer

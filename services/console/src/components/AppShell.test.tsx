@@ -82,7 +82,15 @@ describe("AppShell Langfuse Dashboard link", () => {
     expect(screen.queryByRole("link", { name: /Langfuse Dashboard/ })).not.toBeInTheDocument();
   });
 
-  it.each(["javascript:alert(1)", "//evil.example.com/path", "not a URL"])(
+  it.each([
+    "javascript:alert(1)",
+    "//evil.example.com/path",
+    "not a URL",
+    "https://observability.example.com/path?next=/admin",
+    "https://observability.example.com/path#fragment",
+    "https:\\evil.example.com/path",
+    "https://observability.example.com/path\n",
+  ])(
     "rejects unsafe or malformed API URLs (%s)",
     async (url) => {
       renderAppShell(success(systemInfo(url)));

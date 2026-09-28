@@ -22,16 +22,16 @@ export const AGENT_VERSION_FIELD_HELPS: Record<string, Omit<FieldHelpProps, "pla
     rules: (
       <ul className="list-disc list-inside space-y-0.5">
         <li>
-          必须使用 <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">http://</code> 或{" "}
-          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">https://</code> 协议；
+          必须使用 <code className="font-mono bg-surface-muted px-1 py-0.5 rounded">http://</code> 或{" "}
+          <code className="font-mono bg-surface-muted px-1 py-0.5 rounded">https://</code> 协议；
         </li>
         <li>
           <strong className="text-rose-600">严禁在 URL 中硬编码密码</strong>（如{" "}
-          <code className="font-mono text-slate-500">http://user:pwd@host</code>）；
+          <code className="font-mono text-muted-foreground">http://user:pwd@host</code>）；
         </li>
         <li>
           <strong className="text-rose-600">禁止在 Query 中携带敏感参数</strong>（如{" "}
-          <code className="font-mono text-slate-500">?token=...</code>），鉴权请使用 SecretRef。
+          <code className="font-mono text-muted-foreground">?token=...</code>），鉴权请使用 SecretRef。
         </li>
       </ul>
     ),
@@ -44,7 +44,7 @@ export const AGENT_VERSION_FIELD_HELPS: Record<string, Omit<FieldHelpProps, "pla
     rules: (
       <span>
         <strong className="text-rose-600">严禁直接填入明文 Secret</strong>。当前版本支持{" "}
-        <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">env://&lt;环境变量名&gt;</code> 格式（读取宿主白名单内的环境变量）。无需鉴权请留空。
+        <code className="font-mono bg-surface-muted px-1 py-0.5 rounded">env://&lt;环境变量名&gt;</code> 格式（读取宿主白名单内的环境变量）。无需鉴权请留空。
       </span>
     ),
     example: "env://DEMO_AUTH_TOKEN",
@@ -63,7 +63,7 @@ export const AGENT_VERSION_FIELD_HELPS: Record<string, Omit<FieldHelpProps, "pla
     rules: (
       <span>
         必须为合法 JSON 字典。点路径语法格式：
-        <code className="block mt-1 font-mono bg-slate-100 p-1.5 rounded text-slate-700">
+        <code className="block mt-1 font-mono bg-surface-muted p-1.5 rounded text-foreground-secondary">
           &#123;&quot;&lt;Agent参数名&gt;&quot;: &quot;input.&lt;评测集字段路径&gt;&quot;&#125;
         </code>
       </span>

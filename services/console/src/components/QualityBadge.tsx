@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge, type BadgeTone } from "./Badge";
 
 export type QualityConclusion = "pass" | "fail" | "unknown" | string;
 
@@ -9,24 +10,8 @@ interface QualityBadgeProps {
 
 export const QualityBadge: React.FC<QualityBadgeProps> = ({ quality, className = "" }) => {
   const normalized = (quality || "unknown").toLowerCase();
+  const tone: BadgeTone = normalized === "pass" ? "success" : normalized === "fail" ? "danger" : "neutral";
+  const label = normalized === "pass" ? "PASS" : normalized === "fail" ? "FAIL" : "UNKNOWN";
 
-  let colorClasses = "bg-slate-100 text-slate-600 border-slate-200";
-  let label = "UNKNOWN";
-
-  if (normalized === "pass") {
-    colorClasses = "bg-emerald-50 text-emerald-700 border-emerald-200";
-    label = "PASS";
-  } else if (normalized === "fail") {
-    colorClasses = "bg-rose-50 text-rose-700 border-rose-200";
-    label = "FAIL";
-  }
-
-  return (
-    <span
-      data-testid="quality-badge"
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${colorClasses} ${className}`}
-    >
-      {label}
-    </span>
-  );
+  return <Badge tone={tone} data-testid="quality-badge" data-tone={tone} className={className}>{label}</Badge>;
 };
