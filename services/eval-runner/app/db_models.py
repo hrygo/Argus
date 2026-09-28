@@ -131,6 +131,7 @@ class ExperimentItemExecutionRecord(Base):
     execution_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     eval_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     trace_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    langfuse_trace_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     observation_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     final_attempt_id: Mapped[str | None] = mapped_column(
         String(64),
@@ -221,3 +222,65 @@ class LangfuseSyncTaskRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+
+
+class RunResultSnapshotRecord(Base):
+    __tablename__ = "run_result_snapshots"
+    __table_args__ = (
+        UniqueConstraint("launch_id", "revision", name="uq_run_result_snapshots_launch_revision"),
+        UniqueConstraint("launch_id", "source_result_digest", name="uq_run_result_snapshots_launch_digest"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    launch_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("experiment_launches.id", ondelete="CASCADE"), nullable=False
+    )
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_result_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    manifest_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    manifest: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+
+class BaselineBindingRecord(Base):
+    __tablename__ = "baseline_bindings"
+
+    agent_id: Mapped[str] = mapped_column(
+        String(128), ForeignKey("agents.id", ondelete="CASCADE"), primary_key=True
+    )
+    environment: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result_snapshot_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("run_result_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+
+class LangfuseRunScoreTaskRecord(Base):
+    __tablename__ = "langfuse_run_score_tasks"
+    __table_args__ = (UniqueConstraint("snapshot_id", "task_type", name="uq_langfuse_run_score_snapshot"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    launch_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("experiment_launches.id", ondelete="CASCADE"), nullable=False
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("run_result_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    task_type: Mapped[str] = mapped_column(String(32), default="RUN_SUMMARY", nullable=False)
+    scores_payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", nullable=False)
+    owner_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    claim_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    next_retry_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )

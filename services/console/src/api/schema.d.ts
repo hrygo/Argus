@@ -280,6 +280,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agents/{agent_id}/baselines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the current Agent/environment Baseline */
+        get: operations["get_agent_baseline_api_v1_agents__agent_id__baselines_get"];
+        put?: never;
+        /** Bind a completed result as the current Baseline */
+        post: operations["put_agent_baseline_api_v1_agents__agent_id__baselines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/experiment-launches/{launch_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a stable run-level evaluation summary */
+        get: operations["get_run_summary_api_v1_experiment_launches__launch_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/experiment-launches/{launch_id}/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare a Candidate against its frozen Baseline */
+        get: operations["get_launch_comparison_api_v1_experiment_launches__launch_id__comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/info": {
         parameters: {
             query?: never;
@@ -686,6 +738,45 @@ export interface components {
              */
             created_at: string;
         };
+        /** BaselineCreateRequest */
+        BaselineCreateRequest: {
+            /** Environment */
+            environment: string;
+            /** Result Snapshot Id */
+            result_snapshot_id: string;
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /** BaselineResponse */
+        BaselineResponse: {
+            /** Agent Id */
+            agent_id: string;
+            /** Environment */
+            environment: string;
+            /** Result Snapshot Id */
+            result_snapshot_id: string;
+            /** Revision */
+            revision: number;
+            /** Updated By */
+            updated_by?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Launch Id */
+            launch_id: string;
+            /** Agent Version */
+            agent_version: string;
+            /** Dataset Name */
+            dataset_name: string;
+            /** Dataset Version */
+            dataset_version?: string | null;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+        };
         /** BootstrapResult */
         BootstrapResult: {
             /** Dataset Name */
@@ -694,6 +785,35 @@ export interface components {
             dataset_id?: string | null;
             /** Items Upserted */
             items_upserted: number;
+        };
+        /** ComparisonResponse */
+        ComparisonResponse: {
+            /** Launch Id */
+            launch_id: string;
+            /** Candidate Snapshot Id */
+            candidate_snapshot_id: string;
+            /** Baseline Snapshot Id */
+            baseline_snapshot_id?: string | null;
+            /** Baseline Binding Revision */
+            baseline_binding_revision?: number | null;
+            /** Versions */
+            versions: {
+                [key: string]: unknown;
+            };
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Classification Counts */
+            classification_counts: {
+                [key: string]: number;
+            };
+            /** Items */
+            items: {
+                [key: string]: unknown;
+            }[];
+            /** Next Cursor */
+            next_cursor?: number | null;
         };
         /** DomainErrorResponse */
         DomainErrorResponse: {
@@ -737,6 +857,16 @@ export interface components {
             default_selected: boolean;
             /** Composed Of */
             composed_of?: string[];
+            /**
+             * Direction
+             * @default higher_is_better
+             */
+            direction: string;
+            /**
+             * Critical
+             * @default false
+             */
+            critical: boolean;
         };
         /** ExecutionAttemptResponse */
         ExecutionAttemptResponse: {
@@ -844,6 +974,13 @@ export interface components {
             dataset_name: string;
             /** Dataset Version */
             dataset_version?: string | null;
+            /**
+             * Environment
+             * @default production
+             */
+            environment: string;
+            /** Baseline Snapshot Id */
+            baseline_snapshot_id?: string | null;
             /**
              * Evaluator Ids
              * @description List of item-scope evaluator IDs to run; must contain at least one evaluator. Run-scope evaluators are not supported by the standalone launch runner.
@@ -1065,6 +1202,35 @@ export interface components {
              * @default false
              */
             force: boolean;
+        };
+        /** RunSummaryResponse */
+        RunSummaryResponse: {
+            /** Launch Id */
+            launch_id: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Manifest Digest */
+            manifest_digest: string;
+            /** Versions */
+            versions: {
+                [key: string]: unknown;
+            };
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /**
+             * Langfuse Score Sync Status
+             * @default PENDING
+             */
+            langfuse_score_sync_status: string;
         };
         /** SystemInfoResponse */
         SystemInfoResponse: {
@@ -1817,6 +1983,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluatorResponse"][];
+                };
+            };
+        };
+    };
+    get_agent_baseline_api_v1_agents__agent_id__baselines_get: {
+        parameters: {
+            query?: {
+                environment?: string;
+            };
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaselineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_agent_baseline_api_v1_agents__agent_id__baselines_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-User"?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BaselineCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaselineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_summary_api_v1_experiment_launches__launch_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                launch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_launch_comparison_api_v1_experiment_launches__launch_id__comparison_get: {
+        parameters: {
+            query?: {
+                classification?: string | null;
+                limit?: number;
+                cursor?: number;
+            };
+            header?: never;
+            path: {
+                launch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

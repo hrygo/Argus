@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import sys
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -38,6 +39,33 @@ def test_dataset_resolver_seed_name_mismatch_fails_fast(monkeypatch):
     # Requested dataset does not match dataset in data/dataset.json
     with pytest.raises(ValueError, match="not found in seed"):
         resolver.resolve("non-existent-seed-dataset")
+
+
+def test_explicit_langfuse_dataset_client_is_authoritative_in_seed_mode():
+    dataset_version = datetime(2026, 9, 28, tzinfo=UTC)
+    dataset = SimpleNamespace(
+        id="langfuse-dataset-id",
+        version=dataset_version,
+        items=[
+            SimpleNamespace(
+                id="langfuse-case-1",
+                input={"question": "explicit client"},
+                expected_output={"answer": "pinned"},
+                metadata={"source": "test"},
+            )
+        ],
+    )
+
+    snapshot = DatasetResolver(source="seed").resolve(
+        "banking-agent-regression",
+        dataset_version=dataset_version.isoformat(),
+        dataset_client=dataset,
+    )
+
+    assert snapshot["source"] == "langfuse"
+    assert snapshot["dataset_id"] == "langfuse-dataset-id"
+    assert snapshot["dataset_version"] == dataset_version.isoformat()
+    assert snapshot["items"][0]["id"] == "langfuse-case-1"
 
 
 def test_dataset_resolver_seed_success(monkeypatch):
@@ -176,3 +204,37 @@ def test_launch_dataset_version_persisted_in_db_and_manifest(monkeypatch, tmp_pa
     assert launch.dataset_version is not None
     assert launch.dataset_version == launch.manifest["dataset"]["dataset_version"]
 
+
+
+def test_dataset_resolver_pins_langfuse_latest_to_request_timestamp(monkeypatch):
+    from datetime import datetime as RealDateTime
+
+    from app.dataset import DatasetResolver
+
+    pinned = RealDateTime(2026, 9, 28, 12, 0, tzinfo=UTC)
+
+    class FixedDateTime(RealDateTime):
+        @classmethod
+        def now(cls, tz=None):
+            assert tz == UTC
+            return pinned
+
+    monkeypatch.setenv("ARGUS_DATASET_SOURCE", "langfuse")
+    monkeypatch.setattr("app.dataset.datetime", FixedDateTime)
+    mock_lf = MagicMock()
+    mock_ds = MagicMock()
+    mock_ds.id = "dataset-1"
+    mock_ds.version = None
+    mock_ds.items = []
+    mock_lf.get_dataset.return_value = mock_ds
+    with patch("app.dataset._get_langfuse_client", return_value=mock_lf):
+        snapshot = DatasetResolver().resolve("golden")
+
+    mock_lf.get_dataset.assert_called_once_with("golden", version=pinned)
+    assert snapshot["dataset_version"] == pinned.isoformat()
+
+
+def test_dataset_resolver_seed_rejects_unknown_version(monkeypatch):
+    monkeypatch.setenv("ARGUS_DATASET_SOURCE", "seed")
+    with pytest.raises(ValueError, match="unavailable in seed source"):
+        DatasetResolver().resolve("banking-agent-regression", "2026-09-01T00:00:00Z")

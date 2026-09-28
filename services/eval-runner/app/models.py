@@ -273,6 +273,8 @@ class ExperimentLaunchCreateRequest(BaseModel):
     agent_version: str
     dataset_name: str
     dataset_version: str | None = None
+    environment: str = Field(default="production", min_length=1, max_length=64)
+    baseline_snapshot_id: str | None = Field(default=None, min_length=1, max_length=64)
     evaluator_ids: list[str] = Field(
         default_factory=default_evaluator_registry.default_item_ids,
         min_length=1,
@@ -293,6 +295,51 @@ class EvaluatorResponse(BaseModel):
     description: str | None = None
     default_selected: bool = False
     composed_of: list[str] = Field(default_factory=list)
+    direction: str = "higher_is_better"
+    critical: bool = False
+
+
+class BaselineCreateRequest(BaseModel):
+    environment: str = Field(..., min_length=1, max_length=64)
+    result_snapshot_id: str = Field(..., min_length=1, max_length=64)
+    expected_revision: int = Field(..., ge=0)
+
+
+class BaselineResponse(BaseModel):
+    agent_id: str
+    environment: str
+    result_snapshot_id: str
+    revision: int
+    updated_by: str | None = None
+    updated_at: datetime
+    launch_id: str
+    agent_version: str
+    dataset_name: str
+    dataset_version: str | None = None
+    summary: dict[str, Any]
+
+
+class RunSummaryResponse(BaseModel):
+    launch_id: str
+    snapshot_id: str
+    revision: int
+    created_at: datetime
+    manifest_digest: str
+    versions: dict[str, Any]
+    summary: dict[str, Any]
+    langfuse_score_sync_status: str = "PENDING"
+
+
+class ComparisonResponse(BaseModel):
+    launch_id: str
+    candidate_snapshot_id: str
+    baseline_snapshot_id: str | None = None
+    baseline_binding_revision: int | None = None
+    versions: dict[str, Any]
+    summary: dict[str, Any]
+    classification_counts: dict[str, int]
+    items: list[dict[str, Any]]
+    next_cursor: int | None = None
 
 
 class SystemInfoResponse(BaseModel):

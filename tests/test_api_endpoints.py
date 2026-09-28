@@ -360,6 +360,14 @@ def test_legacy_experiments_run_completes_persisted_launch(client):
 
     mock_dataset.run_experiment.side_effect = fake_run_experiment
     mock_dataset.id = "ds-123"
+    from types import SimpleNamespace
+
+    from app.dataset import DatasetResolver
+
+    mock_dataset.items = [
+        SimpleNamespace(**item)
+        for item in DatasetResolver(source="seed").resolve("banking-agent-regression")["items"]
+    ]
 
     mock_lf = MagicMock()
     mock_lf.get_dataset.return_value = mock_dataset

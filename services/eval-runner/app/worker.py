@@ -237,6 +237,7 @@ class ExecutionWorker:
         eval_error: str | None = None,
         retry_available_at: datetime | None = None,
         trace_id: str | None = None,
+        trace_url: str | None = None,
         observation_id: str | None = None,
         launch_id: str | None = None,
         dataset_item_id: str | None = None,
@@ -297,6 +298,7 @@ class ExecutionWorker:
             item.eval_error = eval_error
             item.available_at = retry_available_at
             item.trace_id = trace_id
+            item.langfuse_trace_url = trace_url
             item.observation_id = observation_id
             item.lease_owner = None
             item.lease_token = None
@@ -529,6 +531,7 @@ class ExecutionWorker:
 
             lf = get_langfuse_client_safe()
             trace_id: str | None = None
+            trace_url: str | None = None
             obs_id: str | None = None
 
             # Double-layered observation or OpenTelemetry
@@ -646,6 +649,13 @@ class ExecutionWorker:
                     if lease_lost.is_set():
                         return False
 
+                    if lf and trace_id and hasattr(lf, "get_trace_url"):
+                        try:
+                            candidate_trace_url = lf.get_trace_url(trace_id=trace_id)
+                            trace_url = candidate_trace_url if isinstance(candidate_trace_url, str) else None
+                        except Exception:
+                            trace_url = None
+
                     is_non_idem_read_timeout = (
                         not spec.is_idempotent and inv_res.error_category == "READ_TIMEOUT"
                     )
@@ -730,6 +740,7 @@ class ExecutionWorker:
                             scores=scores_dict,
                             eval_error=eval_error,
                             trace_id=trace_id,
+                            trace_url=trace_url,
                             observation_id=obs_id,
                             launch_id=launch_id,
                             dataset_item_id=claim_info["dataset_item_id"],
@@ -755,6 +766,7 @@ class ExecutionWorker:
                                 attempt_updates=att_updates,
                                 execution_error=inv_res.error_message,
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],
@@ -774,6 +786,7 @@ class ExecutionWorker:
                                 attempt_updates=att_updates,
                                 execution_error=f"AMBIGUOUS_OUTCOME: {inv_res.error_message}",
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],
@@ -795,6 +808,7 @@ class ExecutionWorker:
                                 execution_error=inv_res.error_message,
                                 retry_available_at=datetime.now(UTC) + timedelta(seconds=delay_sec),
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],
@@ -815,6 +829,7 @@ class ExecutionWorker:
                                 attempt_updates=att_updates,
                                 execution_error=inv_res.error_message,
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],

@@ -69,6 +69,8 @@ def create_experiment_launch(
             agent_version=payload.agent_version,
             dataset_name=payload.dataset_name,
             dataset_version=payload.dataset_version,
+            environment=payload.environment,
+            baseline_snapshot_id=payload.baseline_snapshot_id,
             name=payload.name,
             idempotency_key=effective_key,
             max_concurrency=payload.max_concurrency,

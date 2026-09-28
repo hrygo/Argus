@@ -59,7 +59,6 @@ def test_async_launch_api_lifecycle():
             "agent_id": "banking-agent",
             "agent_version": "v1",
             "dataset_name": "banking-agent-regression",
-            "dataset_version": "v1.0",
             "name": "API Test Launch",
         },
     )
@@ -114,7 +113,6 @@ def test_async_launch_api_retry_failed():
             "agent_id": "banking-agent",
             "agent_version": "v1",
             "dataset_name": "banking-agent-regression",
-            "dataset_version": "v1.0",
             "name": "Retry Failed API Test",
         },
     )

@@ -229,10 +229,11 @@ def test_scenario_d_resume_skips_succeeded(setup_runtime):
 
     with db_mgr.get_session() as session:
         items = session.scalars(select(ExperimentItemExecutionRecord).where(ExperimentItemExecutionRecord.launch_id == launch.id)).all()
+        items_by_case = {item.dataset_item_id: item for item in items}
         # Item 0 is SUCCEEDED
-        items[0].execution_status = "succeeded"
+        items_by_case["item-s"].execution_status = "succeeded"
         # Item 1 is CANCELLED
-        items[1].execution_status = "cancelled"
+        items_by_case["item-c"].execution_status = "cancelled"
         l_rec = session.get(ExperimentLaunchRecord, launch.id)
         l_rec.status = "CANCELLED"
 
@@ -242,9 +243,10 @@ def test_scenario_d_resume_skips_succeeded(setup_runtime):
 
     with db_mgr.get_session() as session:
         items = session.scalars(select(ExperimentItemExecutionRecord).where(ExperimentItemExecutionRecord.launch_id == launch.id)).all()
+        items_by_case = {item.dataset_item_id: item for item in items}
         # Succeeded item remained intact with generation 1!
-        assert items[0].execution_status == "succeeded"
-        assert items[0].dispatch_generation == 1
+        assert items_by_case["item-s"].execution_status == "succeeded"
+        assert items_by_case["item-s"].dispatch_generation == 1
         # Cancelled item was resumed to queued with generation 2!
-        assert items[1].execution_status == "queued"
-        assert items[1].dispatch_generation == 2
+        assert items_by_case["item-c"].execution_status == "queued"
+        assert items_by_case["item-c"].dispatch_generation == 2

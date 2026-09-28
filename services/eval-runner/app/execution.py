@@ -167,6 +167,9 @@ async def _execute_single_item(
     eval_error: str | None = None
     scores_dict: dict[str, float] = {}
     agent_output: dict[str, Any] | None = None
+    trace_id: str | None = None
+    trace_url: str | None = None
+    observation_id: str | None = None
 
     try:
         if lf and hasattr(lf, "start_as_current_observation"):
@@ -176,6 +179,19 @@ async def _execute_single_item(
                 input={"agent": f"{spec.agent_id}:{spec.version}", "request": mapped_payload},
                 metadata={"endpoint": spec.endpoint, "execution_mode": "SYNC_HTTP"},
             ) as call_observation:
+                try:
+                    current_trace_id = lf.get_current_trace_id()
+                    trace_id = current_trace_id if isinstance(current_trace_id, str) else None
+                    current_observation_id = lf.get_current_observation_id()
+                    observation_id = current_observation_id if isinstance(current_observation_id, str) else None
+                    if trace_id and hasattr(lf, "get_trace_url"):
+                        current_trace_url = lf.get_trace_url(trace_id=trace_id)
+                        trace_url = current_trace_url if isinstance(current_trace_url, str) else None
+                except Exception:
+                    trace_id = None
+                    trace_url = None
+                    observation_id = None
+
                 call_res = await executor.invoke(
                     mapped_payload,
                     headers,
@@ -248,6 +264,9 @@ async def _execute_single_item(
             "execution_error": execution_error,
             "eval_error": eval_error,
             "scores": scores_dict,
+            "trace_id": trace_id,
+            "langfuse_trace_url": trace_url,
+            "observation_id": observation_id,
             "completed_at": completed_at,
         }
         if last_attempt_id:
