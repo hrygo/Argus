@@ -25,7 +25,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data, title, className =
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-muted-foreground hover:text-slate-200 text-xs focus:outline-none cursor-pointer"
+          className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-xs focus:outline-none cursor-pointer"
         >
           {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copied ? "已复制" : "复制"}</span>

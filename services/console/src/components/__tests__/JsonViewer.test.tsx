@@ -26,7 +26,8 @@ describe("JsonViewer Component", () => {
     const data = { key: "value" };
     render(<JsonViewer data={data} />);
 
-    const copyBtn = screen.getByText("复制");
+    const copyBtn = screen.getByRole("button", { name: "复制" });
+    expect(copyBtn).toHaveClass("text-slate-400");
     fireEvent.click(copyBtn);
 
     expect(mockClipboard.writeText).toHaveBeenCalledWith(JSON.stringify(data, null, 2));
