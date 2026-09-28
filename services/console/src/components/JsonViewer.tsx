@@ -19,7 +19,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data, title, className =
   };
 
   return (
-    <div className={`relative rounded-lg border border-slate-200 bg-slate-900 text-slate-100 font-mono text-xs overflow-hidden ${className}`}>
+    <div className={`relative rounded-lg border border-border bg-slate-900 text-slate-100 font-mono text-xs overflow-hidden ${className}`}>
       <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800 border-b border-slate-700">
         <span className="text-slate-300 font-medium">{title || "JSON"}</span>
         <button

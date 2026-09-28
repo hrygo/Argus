@@ -301,26 +301,26 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
       onClick={handleBackdropClick}
     >
       <div
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="relative w-full max-w-lg bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-rose-50/40">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-rose-50/40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 id="delete-agent-title" className="text-base font-bold text-slate-900">
+              <h3 id="delete-agent-title" className="text-base font-bold text-foreground">
                 {forceRequired ? "高危：强制清理 Agent 及评测记录" : "删除 Agent"}
               </h3>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {agent.id}</p>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {agent.id}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={mutation.isPending}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            className="p-1.5 text-muted-foreground hover:text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50"
           >
             <X className="w-4 h-4" />
           </button>
@@ -329,7 +329,7 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {!summaryReady && !summaryQuery.isError && (
-            <p role="status" className="text-xs text-slate-500">正在核对最新评测状态...</p>
+            <p role="status" className="text-xs text-muted-foreground">正在核对最新评测状态...</p>
           )}
           {summaryQuery.isError && (
             <div role="alert" className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
@@ -378,7 +378,7 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
                   请输入 Agent 全称 <span className="text-rose-600 font-bold select-all">"{agent.name}"</span> 以确认：
                 </label>
                 <input
@@ -388,23 +388,23 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
                   value={confirmName}
                   onChange={(e) => setConfirmName(e.target.value)}
                   placeholder={`请输入 ${agent.name}`}
-                  className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-medium disabled:opacity-50 disabled:bg-slate-50"
+                  className="ui-control w-full text-sm font-medium disabled:opacity-50"
                 />
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-600 leading-relaxed">
-              确认删除 Agent <strong className="text-slate-900">"{agent.name}"</strong>（{agent.id}）吗？此操作将清理该 Agent 及其规格快照（当前无关联评测记录）。
+            <p className="text-sm text-foreground-secondary leading-relaxed">
+              确认删除 Agent <strong className="text-foreground">"{agent.name}"</strong>（{agent.id}）吗？此操作将清理该 Agent 及其规格快照（当前无关联评测记录）。
             </p>
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
             <button
               type="button"
               onClick={onClose}
               disabled={mutation.isPending}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:text-foreground hover:bg-surface-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50"
             >
               取消
             </button>

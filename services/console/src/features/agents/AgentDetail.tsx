@@ -8,6 +8,8 @@ import { formatApiError } from "../../api/errors";
 import { CreateVersionDialog } from "./CreateVersionDialog";
 import { DeleteAgentModal } from "./DeleteAgentModal";
 import { EmptyState, ErrorState, LoadingState } from "../../components/StateViews";
+import { Badge } from "../../components/Badge";
+import { Button, PageHeader, Panel } from "../../components/ui/Primitives";
 
 export const AgentDetail: React.FC = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -72,51 +74,40 @@ export const AgentDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Navigation Breadcrumbs */}
-      <div>
+      <div className="space-y-3">
         <Link
           to="/agents"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors mb-2"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           <span>返回 Agent 列表</span>
         </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-              <Bot className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">{agent.name}</h2>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {agent.status.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">{agent.id}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setIsDeleteOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors cursor-pointer"
-              title="删除该 Agent"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>删除 Agent</span>
-            </button>
-
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>创建新版本</span>
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title={(
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-primary-border bg-primary-subtle text-primary">
+                <Bot className="h-4 w-4" />
+              </span>
+              <span className="truncate">{agent.name}</span>
+              <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "success" : "neutral"}>
+                {agent.status.toUpperCase()}
+              </Badge>
+            </span>
+          )}
+          description={<span className="break-all font-mono">{agent.id}</span>}
+          actions={(
+            <>
+              <Button variant="danger" onClick={() => setIsDeleteOpen(true)} title="删除该 Agent">
+                <Trash2 className="h-4 w-4" />
+                <span>删除 Agent</span>
+              </Button>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                <span>创建新版本</span>
+              </Button>
+            </>
+          )}
+        />
       </div>
 
       {actionError && (
@@ -126,51 +117,52 @@ export const AgentDetail: React.FC = () => {
       )}
 
       {/* Metadata Card */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+      <Panel className="grid grid-cols-1 gap-4 p-5 shadow-xs md:grid-cols-4">
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1">负责人 / 团队</span>
-          <span className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-            <User className="w-4 h-4 text-slate-400" />
+          <span className="text-xs font-medium text-muted-foreground block mb-1">负责人 / 团队</span>
+          <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <User className="w-4 h-4 text-muted-foreground" />
             <span>{agent.owner || "未指定"}</span>
           </span>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1">注册时间</span>
-          <span className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-slate-400" />
+          <span className="text-xs font-medium text-muted-foreground block mb-1">注册时间</span>
+          <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
             <span>{new Date(agent.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
           </span>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1">评测记录</span>
-          <span className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground block mb-1">评测记录</span>
+          <span className="text-sm font-semibold text-foreground flex items-center gap-2">
             <span>{agent.launch_count ?? 0} 次</span>
             {(agent.active_launch_count ?? 0) > 0 && (
-              <span
+              <Badge
+                tone="info"
                 title="活跃评测包含待执行、排队中、运行中、取消中等尚未结束状态的 Launch。"
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200"
+                className="px-1.5 text-[10px]"
               >
                 {agent.active_launch_count} 条活跃评测
-              </span>
+              </Badge>
             )}
           </span>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1">详细描述</span>
-          <span className="text-xs text-slate-600 line-clamp-2">
+          <span className="text-xs font-medium text-muted-foreground block mb-1">详细描述</span>
+          <span className="text-xs text-foreground-secondary line-clamp-2">
             {agent.description || "暂无描述"}
           </span>
         </div>
-      </div>
+      </Panel>
 
       {/* Versions Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-600" />
-            <h3 className="text-base font-bold text-slate-900">版本规格快照 (Agent Versions)</h3>
+            <Layers className="w-4 h-4 text-primary" />
+            <h3 className="text-base font-bold text-foreground">版本规格快照 (Agent Versions)</h3>
           </div>
-          <span className="text-xs text-slate-400">所有版本规格创建后均为不可变快照</span>
+          <span className="text-xs text-muted-foreground">所有版本规格创建后均为不可变快照</span>
         </div>
 
         {isVersionsLoading && <LoadingState message="正在加载版本记录..." />}
@@ -183,7 +175,7 @@ export const AgentDetail: React.FC = () => {
             action={
               <button
                 onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>立即创建版本</span>
@@ -193,10 +185,10 @@ export const AgentDetail: React.FC = () => {
         )}
 
         {!isVersionsLoading && !versionsError && versions && versions.length > 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="ui-panel overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <table className="w-full text-left text-sm text-foreground-secondary">
+                <thead className="bg-canvas/75 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">版本号 (Tag)</th>
                     <th className="px-6 py-3.5">状态</th>
@@ -207,53 +199,47 @@ export const AgentDetail: React.FC = () => {
                     <th className="px-6 py-3.5 text-right">操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {versions.map((ver) => (
-                    <tr key={ver.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900">
+                    <tr key={ver.id} className="hover:bg-surface-muted/80 transition-colors">
+                      <td className="px-6 py-4 font-mono font-bold text-foreground">
                         {ver.version}
                       </td>
 
                       <td className="px-6 py-4">
-                        {ver.is_active ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            ACTIVE
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
-                            ARCHIVED
-                          </span>
-                        )}
+                        <Badge tone={ver.is_active ? "success" : "neutral"}>
+                          {ver.is_active ? "ACTIVE" : "ARCHIVED"}
+                        </Badge>
                       </td>
 
                       <td className="px-6 py-4 text-xs">
                         {ver.environment ? (
-                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium">
+                          <span className="px-2 py-0.5 rounded bg-primary-subtle text-primary-strong font-medium">
                             {ver.environment}
                           </span>
                         ) : (
-                          <span className="text-slate-300">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </td>
 
-                      <td className="px-6 py-4 font-mono text-xs text-slate-600 max-w-xs truncate" title={ver.endpoint}>
+                      <td className="px-6 py-4 font-mono text-xs text-foreground-secondary max-w-xs truncate" title={ver.endpoint}>
                         {ver.endpoint}
                       </td>
 
-                      <td className="px-6 py-4 font-mono text-xs text-slate-500">
+                      <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
                         <span title={ver.spec_digest}>
                           {ver.spec_digest.slice(0, 10)}...
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-xs text-slate-500">
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
                         {new Date(ver.created_at).toLocaleString("zh-CN", { hour12: false })}
                       </td>
 
                       <td className="px-6 py-4 text-right space-x-2">
                         <Link
                           to={`/agents/${agent.id}/versions/${ver.version}`}
-                          className="inline-flex items-center gap-0.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                          className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary-strong"
                         >
                           <span>查看配置</span>
                           <ChevronRight className="w-3 h-3" />
@@ -268,7 +254,7 @@ export const AgentDetail: React.FC = () => {
                               }
                             }}
                             disabled={archiveMutation.isPending}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-rose-600 transition-colors ml-2 cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-rose-600 transition-colors ml-2 cursor-pointer disabled:opacity-50"
                           >
                             <Archive className="w-3 h-3" />
                             <span>归档</span>

@@ -20,10 +20,12 @@ import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
 import { StatusBadge } from "../../components/StatusBadge";
 import { QualityBadge } from "../../components/QualityBadge";
+import { SyncStatusBadge } from "../../components/SyncStatusBadge";
 import { JsonViewer } from "../../components/JsonViewer";
 import { ItemTable } from "./ItemTable";
 import { ACTIVE_LAUNCH_STATUSES, LaunchStatus } from "./LaunchesList";
 import { ErrorState, LoadingState } from "../../components/StateViews";
+import { Button, PageHeader, Panel, buttonClassName } from "../../components/ui/Primitives";
 
 type LaunchResponse = import("../../api/schema").components["schemas"]["ExperimentLaunchResponse"];
 type ItemExecution = import("../../api/schema").components["schemas"]["ExperimentItemExecutionResponse"];
@@ -265,7 +267,7 @@ export const LaunchDetail: React.FC = () => {
       <div className="space-y-3">
         <Link
           to="/launches"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>返回评测列表</span>
@@ -302,114 +304,84 @@ export const LaunchDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Navigation Breadcrumbs */}
-      <div>
+      <div className="space-y-3">
         <Link
           to="/launches"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors mb-2"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           <span>返回评测列表</span>
         </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-              <Rocket className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight font-mono">
-                  {launch.id}
-                </h2>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                创建时间: {new Date(launch.created_at).toLocaleString("zh-CN", { hour12: false })}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-            <button
-              onClick={() => {
-                refetchLaunch();
-                refetchItems();
-              }}
-              disabled={isLaunchFetching}
-              className="p-2 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              title="刷新"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLaunchFetching ? "animate-spin text-indigo-600" : ""}`} />
-            </button>
-
-            {/* Run Button */}
-            {allowedActions.includes("run") && (
-              <button
-                type="button"
-                aria-label="立即执行评测"
-                onClick={() => runMutation.mutate()}
-                disabled={runMutation.isPending}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{runMutation.isPending ? "正在运行评测..." : "立即执行评测 (Run Evaluation)"}</span>
-              </button>
-            )}
-
-            {/* Cancel Button */}
-            {allowedActions.includes("cancel") && (
-              <button
-                type="button"
-                onClick={() => cancelMutation.mutate()}
-                disabled={cancelMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <span>{cancelMutation.isPending ? "正在取消..." : "取消评测 (Cancel)"}</span>
-              </button>
-            )}
-
-            {/* Resume Button */}
-            {allowedActions.includes("resume") && (
-              <button
-                type="button"
-                onClick={() => resumeMutation.mutate()}
-                disabled={resumeMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>{resumeMutation.isPending ? "正在恢复..." : "断点恢复 (Resume)"}</span>
-              </button>
-            )}
-
-            {/* Retry Failed Button */}
-            {allowedActions.includes("retry_failed") && (
-              <button
-                type="button"
+        <PageHeader
+          title={(
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-primary-border bg-primary-subtle text-primary">
+                <Rocket className="h-4 w-4" />
+              </span>
+              <span className="break-all font-mono">{launch.id}</span>
+            </span>
+          )}
+          description={`创建时间: ${new Date(launch.created_at).toLocaleString("zh-CN", { hour12: false })}`}
+          actions={(
+            <>
+              <Button
+                variant="secondary"
+                aria-label="刷新"
                 onClick={() => {
+                  refetchLaunch();
+                  refetchItems();
+                }}
+                disabled={isLaunchFetching}
+                title="刷新"
+                className="px-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLaunchFetching ? "animate-spin text-primary" : ""}`} />
+              </Button>
+
+              {allowedActions.includes("run") && (
+                <Button onClick={() => runMutation.mutate()} disabled={runMutation.isPending} className="text-xs">
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  <span>{runMutation.isPending ? "正在运行评测..." : "立即执行评测 (Run Evaluation)"}</span>
+                </Button>
+              )}
+
+              {allowedActions.includes("cancel") && (
+                <Button variant="danger" onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending} className="text-xs">
+                  <span>{cancelMutation.isPending ? "正在取消..." : "取消评测 (Cancel)"}</span>
+                </Button>
+              )}
+
+              {allowedActions.includes("resume") && (
+                <Button onClick={() => resumeMutation.mutate()} disabled={resumeMutation.isPending} className="text-xs">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>{resumeMutation.isPending ? "正在恢复..." : "断点恢复 (Resume)"}</span>
+                </Button>
+              )}
+
+              {allowedActions.includes("retry_failed") && (
+                <Button variant="warning" onClick={() => {
                   setForceRetry(false);
                   setShowRetryModal(true);
-                }}
-                disabled={retryFailedMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <span>{retryFailedMutation.isPending ? "重试中..." : "重试失败用例 (Retry Failed)"}</span>
-              </button>
-            )}
+                }} disabled={retryFailedMutation.isPending} className="text-xs">
+                  <span>{retryFailedMutation.isPending ? "重试中..." : "重试失败用例 (Retry Failed)"}</span>
+                </Button>
+              )}
 
-            {/* Langfuse Deep Link */}
-            {launch.langfuse_experiment_url && (
-              <a
-                href={launch.langfuse_experiment_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="在 Langfuse 中查看"
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors"
-              >
-                <span>在 Langfuse 中查看</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
-          </div>
-        </div>
+              {launch.langfuse_experiment_url && (
+                <a
+                  href={launch.langfuse_experiment_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="在 Langfuse 中查看"
+                  className={buttonClassName("secondary", "text-xs")}
+                >
+                  <span>在 Langfuse 中查看</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </>
+          )}
+        />
       </div>
 
       {actionError && (
@@ -435,47 +407,38 @@ export const LaunchDetail: React.FC = () => {
 
       {/* Status Reason */}
       {launch.status_reason && (
-        <div className="p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700">
-          <span className="font-semibold text-slate-900 mr-1.5">状态说明:</span>
+        <div className="p-3 text-xs bg-canvas border border-border rounded-xl text-foreground-secondary">
+          <span className="font-semibold text-foreground mr-1.5">状态说明:</span>
           <span>{launch.status_reason}</span>
         </div>
       )}
 
       {/* Primary Status Banner (Dual Badges, Langfuse & Metrics) */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <Panel className="grid grid-cols-2 gap-4 p-5 shadow-xs sm:grid-cols-3 lg:grid-cols-5">
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1.5">
+          <span className="text-xs font-medium text-muted-foreground block mb-1.5">
             执行调度状态 (Execution Status)
           </span>
           <StatusBadge status={launch.status} />
         </div>
 
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1.5">
+          <span className="text-xs font-medium text-muted-foreground block mb-1.5">
             质量门禁结论 (Quality Conclusion)
           </span>
           <QualityBadge quality={launch.quality_conclusion} />
         </div>
 
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1.5">
+          <span className="text-xs font-medium text-muted-foreground block mb-1.5">
             Langfuse 同步状态 (Sync Status)
           </span>
           <div className="flex items-center gap-1.5">
-            <span
+            <SyncStatusBadge
+              status={launch.langfuse_sync_status}
               data-testid="langfuse-sync-badge"
-              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono inline-flex items-center gap-1 ${
-                launch.langfuse_sync_status === "SYNCED"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : launch.langfuse_sync_status === "FAILED"
-                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                  : launch.langfuse_sync_status === "NOT_APPLICABLE"
-                  ? "bg-slate-100 text-slate-600 border border-slate-200"
-                  : "bg-amber-50 text-amber-700 border border-amber-200"
-              }`}
-            >
-              {launch.langfuse_sync_status}
-            </span>
+              className="font-mono"
+            />
           </div>
           {launch.langfuse_sync_error && (
             <p className="text-[11px] text-rose-600 mt-1 truncate" title={launch.langfuse_sync_error}>
@@ -485,51 +448,51 @@ export const LaunchDetail: React.FC = () => {
         </div>
 
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1.5">
+          <span className="text-xs font-medium text-muted-foreground block mb-1.5">
             用例通过率 (Pass Rate)
           </span>
-          <span className="text-base font-bold font-mono text-slate-900">
+          <span className="text-base font-bold font-mono text-foreground">
             {itemsError ? (
               <span className="text-xs text-rose-600">暂不可用</span>
             ) : totalItems !== null && totalItems > 0 ? (
               <>
                 <span className="text-emerald-600">{passedItems}</span>
-                <span className="text-slate-400 font-normal"> / </span>
+                <span className="text-muted-foreground font-normal"> / </span>
                 <span>{totalItems}</span>
-                <span className="text-xs text-slate-500 font-normal ml-2">
+                <span className="text-xs text-muted-foreground font-normal ml-2">
                   ({(((passedItems ?? 0) / totalItems) * 100).toFixed(1)}%)
                 </span>
               </>
             ) : (
-              <span className="text-xs text-slate-400">尚未统计</span>
+              <span className="text-xs text-muted-foreground">尚未统计</span>
             )}
           </span>
         </div>
 
         <div>
-          <span className="text-xs font-medium text-slate-400 block mb-1.5 flex items-center gap-1">
+          <span className="text-xs font-medium text-muted-foreground block mb-1.5 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" /> 执行总耗时 (Duration)
           </span>
-          <span className="text-sm font-semibold font-mono text-slate-800">{durationText}</span>
+          <span className="text-sm font-semibold font-mono text-foreground">{durationText}</span>
         </div>
-      </div>
+      </Panel>
 
       {/* Real-time Progress Board */}
       {progress && progress.total > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3">
+        <div className="ui-panel p-5 shadow-xs space-y-3">
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 font-bold text-slate-800">
+            <div className="flex items-center gap-2 font-bold text-foreground">
               <span>实时执行进度看板</span>
-              <span className="font-mono text-indigo-600">({progress.percentage}%)</span>
+              <span className="font-mono text-primary">({progress.percentage}%)</span>
             </div>
-            <div className="flex items-center gap-3 text-slate-500 font-mono text-[11px]">
+            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px]">
               <span>总调用: {progress.attempts} 次</span>
               <span>重试: {progress.retries} 次</span>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
+          <div className="w-full bg-surface-muted rounded-full h-2.5 overflow-hidden flex">
             <div
               className="bg-emerald-500 h-full transition-all duration-300"
               style={{ width: `${progress.total > 0 ? (progress.succeeded / progress.total) * 100 : 0}%` }}
@@ -556,7 +519,7 @@ export const LaunchDetail: React.FC = () => {
               title={`等待重试: ${progress.retry_wait}`}
             />
             <div
-              className="bg-slate-300 h-full transition-all duration-300"
+              className="bg-border-strong h-full transition-all duration-300"
               style={{ width: `${progress.total > 0 ? (progress.cancelled / progress.total) * 100 : 0}%` }}
               title={`已取消: ${progress.cancelled}`}
             />
@@ -564,13 +527,13 @@ export const LaunchDetail: React.FC = () => {
 
           {/* Grid Counts */}
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-1">
-            <div className="text-center p-2 rounded-lg bg-slate-50 border border-slate-100">
-              <span className="text-[11px] text-slate-400 block">总用例</span>
-              <span className="text-sm font-bold font-mono text-slate-700">{progress.total}</span>
+            <div className="text-center p-2 rounded-lg bg-canvas border border-border">
+              <span className="text-[11px] text-muted-foreground block">总用例</span>
+              <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.total}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-indigo-50/60 border border-indigo-100">
-              <span className="text-[11px] text-indigo-600 block">排队中</span>
-              <span className="text-sm font-bold font-mono text-indigo-700">{progress.queued + progress.pending}</span>
+            <div className="text-center p-2 rounded-lg bg-primary-subtle/60 border border-primary-border">
+              <span className="text-[11px] text-primary block">排队中</span>
+              <span className="text-sm font-bold font-mono text-primary-strong">{progress.queued + progress.pending}</span>
             </div>
             <div className="text-center p-2 rounded-lg bg-sky-50/60 border border-sky-100">
               <span className="text-[11px] text-sky-600 block">运行中</span>
@@ -592,37 +555,37 @@ export const LaunchDetail: React.FC = () => {
               <span className="text-[11px] text-yellow-600 block">等待重试</span>
               <span className="text-sm font-bold font-mono text-yellow-700">{progress.retry_wait}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-gray-50 border border-gray-200">
-              <span className="text-[11px] text-gray-500 block">已取消</span>
-              <span className="text-sm font-bold font-mono text-gray-600">{progress.cancelled}</span>
+            <div className="text-center p-2 rounded-lg bg-surface-muted border border-border">
+              <span className="text-[11px] text-muted-foreground block">已取消</span>
+              <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.cancelled}</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Frozen Manifest 4-Dimension Snapshot Overview */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="ui-panel p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-            <h3 className="text-sm font-bold text-slate-900">
+            <CheckCircle2 className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-foreground">
               四维不可变冻结快照 (Frozen Manifest Snapshot)
             </h3>
             <span
               data-testid="manifest-schema-version"
-              className="px-2 py-0.5 rounded text-[11px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold"
+              className="px-2 py-0.5 rounded text-[11px] font-mono bg-primary-subtle text-primary-strong border border-primary-border font-semibold"
             >
               Schema v{manifest.schema_version || manifest.manifest_version || "1.0"}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-slate-400 hidden sm:inline">
+            <span className="text-[11px] text-muted-foreground hidden sm:inline">
               严格固定执行时规格，不随 Registry 后续变更漂移
             </span>
             <button
               onClick={() => setShowRawManifest(!showRawManifest)}
-              className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-strong font-medium cursor-pointer"
             >
               <FileCode className="w-3.5 h-3.5" />
               <span>{showRawManifest ? "收起 JSON" : "查看完整 Manifest JSON"}</span>
@@ -633,56 +596,56 @@ export const LaunchDetail: React.FC = () => {
         {/* 4-Dimension Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           {/* Dimension 1: Agent Snapshot */}
-          <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-100 space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-              <Bot className="w-4 h-4 text-indigo-600" />
+          <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+              <Bot className="w-4 h-4 text-primary" />
               <span>1. Agent 规格快照</span>
             </div>
-            <div className="space-y-1 text-slate-600">
+            <div className="space-y-1 text-foreground-secondary">
               <div>
-                <span className="text-slate-400">Agent:</span>{" "}
+                <span className="text-muted-foreground">Agent:</span>{" "}
                 <span className="font-semibold">{manifestAgent.id || launch.agent_id}</span>
               </div>
               <div>
-                <span className="text-slate-400">Version:</span>{" "}
+                <span className="text-muted-foreground">Version:</span>{" "}
                 <span className="font-mono font-semibold">{manifestAgent.version || launch.agent_version}</span>
               </div>
               <div className="truncate" title={manifestAgent.endpoint || ""}>
-                <span className="text-slate-400">Endpoint:</span>{" "}
+                <span className="text-muted-foreground">Endpoint:</span>{" "}
                 <span className="font-mono text-[11px]">{manifestAgent.endpoint || "-"}</span>
               </div>
               <div className="truncate" title={manifestAgent.spec_digest || ""}>
-                <span className="text-slate-400">Digest:</span>{" "}
+                <span className="text-muted-foreground">Digest:</span>{" "}
                 <span className="font-mono text-[11px]">{manifestAgent.spec_digest?.slice(0, 12)}...</span>
               </div>
             </div>
           </div>
 
           {/* Dimension 2: Dataset Snapshot */}
-          <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-100 space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-              <Database className="w-4 h-4 text-indigo-600" />
+          <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+              <Database className="w-4 h-4 text-primary" />
               <span>2. Dataset 快照</span>
             </div>
-            <div className="space-y-1 text-slate-600">
+            <div className="space-y-1 text-foreground-secondary">
               <div>
-                <span className="text-slate-400">Name:</span>{" "}
+                <span className="text-muted-foreground">Name:</span>{" "}
                 <span className="font-semibold">{manifest.dataset?.dataset_name || manifest.dataset?.name || launch.dataset_name}</span>
               </div>
               <div>
-                <span className="text-slate-400">Version:</span>{" "}
+                <span className="text-muted-foreground">Version:</span>{" "}
                 <span className="font-mono text-[11px] block truncate" title={manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || ""}>
                   {manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || "-"}
                 </span>
               </div>
               <div className="truncate" title={manifest.dataset?.snapshot_digest || ""}>
-                <span className="text-slate-400">Digest:</span>{" "}
+                <span className="text-muted-foreground">Digest:</span>{" "}
                 <span data-testid="dataset-snapshot-digest" className="font-mono text-[11px]">
                   {manifest.dataset?.snapshot_digest ? `${manifest.dataset.snapshot_digest.slice(0, 12)}...` : "-"}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400">Items:</span>{" "}
+                <span className="text-muted-foreground">Items:</span>{" "}
                 <span className="font-mono font-semibold">
                   {manifest.dataset?.items_count ?? (manifest.dataset as any)?.items?.length ?? totalItems}
                 </span>
@@ -691,8 +654,8 @@ export const LaunchDetail: React.FC = () => {
           </div>
 
           {/* Dimension 3: Evaluators */}
-          <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-100 space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+          <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
               <Zap className="w-4 h-4 text-amber-500" />
               <span>3. 评测门禁指标 ({manifestEvaluators.length})</span>
             </div>
@@ -702,7 +665,7 @@ export const LaunchDetail: React.FC = () => {
                 return (
                   <span
                     key={evalId}
-                    className="px-2 py-0.5 rounded text-[11px] font-mono bg-white border border-slate-200 text-slate-700"
+                    className="px-2 py-0.5 rounded text-[11px] font-mono bg-surface border border-border text-foreground-secondary"
                   >
                     {evalId}
                   </span>
@@ -712,32 +675,32 @@ export const LaunchDetail: React.FC = () => {
           </div>
 
           {/* Dimension 4: Execution Policy & Runner */}
-          <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-100 space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+          <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
               <Sliders className="w-4 h-4 text-emerald-600" />
               <span>4. Runner 与调度策略</span>
             </div>
-            <div className="space-y-1 text-slate-600">
+            <div className="space-y-1 text-foreground-secondary">
               <div>
-                <span className="text-slate-400">Runner Ver:</span>{" "}
+                <span className="text-muted-foreground">Runner Ver:</span>{" "}
                 <span data-testid="runner-version" className="font-mono text-[11px]">
                   {manifestRunner.runner_version || "1.0.0"}
                 </span>
               </div>
               <div className="truncate" title={manifestRunner.mapping_engine_version || ""}>
-                <span className="text-slate-400">Engine:</span>{" "}
+                <span className="text-muted-foreground">Engine:</span>{" "}
                 <span className="font-mono text-[11px]">{manifestRunner.mapping_engine_version || "-"}</span>
               </div>
               <div>
-                <span className="text-slate-400">Concurrency:</span>{" "}
+                <span className="text-muted-foreground">Concurrency:</span>{" "}
                 <span className="font-semibold">{manifestPolicy.max_concurrency ?? manifestRunner.concurrency ?? 1}</span>
               </div>
               <div>
-                <span className="text-slate-400">Timeout:</span>{" "}
+                <span className="text-muted-foreground">Timeout:</span>{" "}
                 <span>{manifestPolicy.timeout_seconds ?? 30}s</span>
               </div>
               <div>
-                <span className="text-slate-400">Retries:</span>{" "}
+                <span className="text-muted-foreground">Retries:</span>{" "}
                 <span>{manifestPolicy.max_retries ?? 0}</span>
               </div>
             </div>
@@ -746,8 +709,8 @@ export const LaunchDetail: React.FC = () => {
 
         {/* Raw Manifest Viewer Drawer */}
         {showRawManifest && (
-          <div className="pt-3 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-600 block mb-2">
+          <div className="pt-3 border-t border-border">
+            <span className="text-xs font-semibold text-foreground-secondary block mb-2">
               完整冻结 Manifest 快照 (launch.manifest)
             </span>
             <JsonViewer data={manifest} title="Immutable Manifest JSON" />
@@ -765,9 +728,9 @@ export const LaunchDetail: React.FC = () => {
       {/* Retry Failed Confirmation Modal */}
       {showRetryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900">重试失败用例 (Retry Failed Items)</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
+          <div className="bg-surface rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-border">
+            <h3 className="text-base font-bold text-foreground">重试失败用例 (Retry Failed Items)</h3>
+            <p className="text-xs text-foreground-secondary leading-relaxed">
               系统将仅针对执行失败 (<code className="text-rose-600 font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-amber-600 font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
             </p>
 
@@ -777,7 +740,7 @@ export const LaunchDetail: React.FC = () => {
                   type="checkbox"
                   checked={forceRetry}
                   onChange={(e) => setForceRetry(e.target.checked)}
-                  className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+                  className="mt-0.5 rounded text-primary focus:ring-focus"
                 />
                 <span className="text-xs text-amber-900">
                   <strong className="block font-semibold">强制重试非幂等可能已发送用例 (Force Replay)</strong>
@@ -790,7 +753,7 @@ export const LaunchDetail: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowRetryModal(false)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold text-foreground-secondary hover:text-foreground cursor-pointer"
               >
                 取消
               </button>

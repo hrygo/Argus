@@ -112,36 +112,36 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
   const renderContent = () => (
     <>
       {/* 头部 */}
-      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100">
-        <span className="font-bold text-slate-900 flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-border">
+        <span className="font-bold text-foreground flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-primary"></span>
           {title}
         </span>
         <button
           type="button"
           onClick={() => setIsOpen(false)}
           aria-label="关闭说明"
-          className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+          className="text-muted-foreground hover:text-foreground-secondary p-1 rounded-md hover:bg-surface-muted transition-colors cursor-pointer"
         >
           <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
       </div>
 
       {/* 内容主体 */}
-      <div className="space-y-2.5 text-slate-600">
+      <div className="space-y-2.5 text-foreground-secondary">
         <div>
-          <span className="font-semibold text-slate-700">📌 含义与作用：</span>
-          <p className="mt-0.5 leading-relaxed text-slate-600">{meaning}</p>
+          <span className="font-semibold text-foreground-secondary">📌 含义与作用：</span>
+          <p className="mt-0.5 leading-relaxed text-foreground-secondary">{meaning}</p>
         </div>
 
         <div>
-          <span className="font-semibold text-slate-700">📝 配置规范：</span>
-          <div className="mt-0.5 leading-relaxed text-slate-600">{rules}</div>
+          <span className="font-semibold text-foreground-secondary">📝 配置规范：</span>
+          <div className="mt-0.5 leading-relaxed text-foreground-secondary">{rules}</div>
         </div>
 
         <div>
-          <span className="font-semibold text-slate-700">💡 参考示例：</span>
-          <div className="mt-1 bg-slate-50 p-2 rounded-lg border border-slate-200/80 font-mono text-[11px] text-indigo-700 break-all select-all">
+          <span className="font-semibold text-foreground-secondary">💡 参考示例：</span>
+          <div className="mt-1 bg-canvas p-2 rounded-lg border border-border/80 font-mono text-[11px] text-primary-strong break-all select-all">
             {example}
           </div>
         </div>
@@ -157,7 +157,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label={`查看「${title}」说明`}
         aria-expanded={isOpen}
-        className="text-slate-400 hover:text-indigo-600 transition-colors p-0.5 rounded-full hover:bg-indigo-50 focus:outline-none cursor-pointer"
+        className="text-muted-foreground hover:text-primary transition-colors p-0.5 rounded-full hover:bg-primary-subtle focus:outline-none cursor-pointer"
         title="查看字段说明"
       >
         <CircleHelp className="w-3.5 h-3.5" />
@@ -178,7 +178,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
             >
               <div
                 ref={cardRef}
-                className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 text-xs text-left animate-in slide-in-from-bottom-4 duration-200 max-h-[85vh] overflow-y-auto"
+                className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-2xl p-4 text-xs text-left animate-in slide-in-from-bottom-4 duration-200 max-h-[85vh] overflow-y-auto"
               >
                 {renderContent()}
               </div>
@@ -188,7 +188,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
             <div
               ref={cardRef}
               style={desktopStyle}
-              className="fixed z-50 w-80 sm:w-88 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 text-xs text-left animate-in fade-in zoom-in-95 duration-150"
+              className="fixed z-50 w-80 sm:w-88 bg-surface border border-border rounded-xl shadow-xl p-3.5 text-xs text-left animate-in fade-in zoom-in-95 duration-150"
               role="dialog"
               aria-label={`${title} 帮助说明`}
             >
