@@ -166,7 +166,7 @@ const Overlay: React.FC<ShellProps> = ({
         tabIndex={-1}
         onKeyDown={onKeyDown}
         className={clsx(
-          "relative flex flex-col border border-border bg-surface shadow-2xl",
+          "relative flex flex-col border border-border bg-surface shadow-lg",
           isDrawer
             ? "h-full w-full max-w-drawer border-y-0 border-r-0"
             : "my-auto max-h-full w-full sm:max-w-modal",

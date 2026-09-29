@@ -121,6 +121,15 @@
   --container-col-xl: 180px;
   --container-table-lg: 1132px;
   --container-table-xl: 1200px;
+
+  /* Elevation Scale — mirrors design-system/tokens/elevation.ts. Declared
+     here so `shadow-lg` on an overlay is the Argus step rather than
+     Tailwind's, which is roughly twice the blur at a quarter of the
+     restraint. Asserted by design-system/__tests__/elevationScale.test.ts. */
+  --shadow-xs: var(--argus-shadow-xs);
+  --shadow-sm: var(--argus-shadow-sm);
+  --shadow-md: var(--argus-shadow-md);
+  --shadow-lg: var(--argus-shadow-lg);
 }
 
 @layer base {

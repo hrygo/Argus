@@ -178,7 +178,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
             >
               <div
                 ref={cardRef}
-                className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-2xl p-4 text-xs text-left animate-in slide-in-from-bottom-4 duration-200 max-h-overlay-panel overflow-y-auto"
+                className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-lg p-4 text-xs text-left animate-in slide-in-from-bottom-4 duration-200 max-h-overlay-panel overflow-y-auto"
               >
                 {renderContent()}
               </div>
@@ -188,7 +188,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
             <div
               ref={cardRef}
               style={desktopStyle}
-              className="fixed z-50 w-80 sm:w-88 bg-surface border border-border rounded-xl shadow-xl p-3.5 text-xs text-left animate-in fade-in zoom-in-95 duration-150"
+              className="fixed z-50 w-80 sm:w-88 bg-surface border border-border rounded-xl shadow-lg p-3.5 text-xs text-left animate-in fade-in zoom-in-95 duration-150"
               role="dialog"
               aria-label={`${title} 帮助说明`}
             >
