@@ -111,7 +111,7 @@ export const AgentDetail: React.FC = () => {
       </div>
 
       {actionError && (
-        <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+        <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
           {actionError}
         </div>
       )}
@@ -140,7 +140,7 @@ export const AgentDetail: React.FC = () => {
               <Badge
                 tone="info"
                 title="活跃评测包含待执行、排队中、运行中、取消中等尚未结束状态的 Launch。"
-                className="px-1.5 text-[10px]"
+                className="px-1.5 text-2xs"
               >
                 {agent.active_launch_count} 条活跃评测
               </Badge>
@@ -254,7 +254,7 @@ export const AgentDetail: React.FC = () => {
                               }
                             }}
                             disabled={archiveMutation.isPending}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-rose-600 transition-colors ml-2 cursor-pointer disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-fail transition-colors ml-2 cursor-pointer disabled:opacity-50"
                           >
                             <Archive className="w-3 h-3" />
                             <span>归档</span>

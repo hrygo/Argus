@@ -297,7 +297,7 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-agent-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay/50 backdrop-blur-xs"
       onClick={handleBackdropClick}
     >
       <div
@@ -305,9 +305,9 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-rose-50/40">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-fail-subtle/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600">
+            <div className="w-10 h-10 rounded-xl bg-fail-subtle border border-fail-border flex items-center justify-center text-fail">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
@@ -332,7 +332,7 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
             <p role="status" className="text-xs text-muted-foreground">正在核对最新评测状态...</p>
           )}
           {summaryQuery.isError && (
-            <div role="alert" className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
+            <div role="alert" className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail">
               <p>无法加载最新评测状态：{formatApiError(summaryQuery.error)}</p>
               <button
                 type="button"
@@ -344,16 +344,16 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
             </div>
           )}
           {errorMsg && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium leading-relaxed">
+            <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium leading-relaxed">
               {errorMsg}
             </div>
           )}
 
           {/* Active Launches Blocking Notice */}
           {hasActiveLaunches && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-2 leading-relaxed">
-              <p className="font-semibold text-rose-900 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <div className="p-3.5 bg-fail-subtle border border-fail-border rounded-xl text-xs text-fail-strong space-y-2 leading-relaxed">
+              <p className="font-semibold text-fail-strong flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-fail flex-shrink-0" />
                 <span>禁止删除：存在活跃评测任务</span>
               </p>
               <p>
@@ -364,22 +364,22 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
 
           {forceRequired ? (
             <div className="space-y-4">
-              <div className="p-3.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-xs text-amber-800 space-y-2 leading-relaxed">
-                <p className="font-semibold text-amber-900 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="p-3.5 bg-timeout-subtle/90 border border-timeout-border/80 rounded-xl text-xs text-timeout-strong space-y-2 leading-relaxed">
+                <p className="font-semibold text-timeout-strong flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-timeout flex-shrink-0" />
                   <span>注意：该 Agent 包含关联评测记录</span>
                 </p>
                 <p>
                   该 Agent 存在 <strong>{effectiveLaunchCount}</strong> 条历史评测记录。强制清理将连同本地所有执行历史一并清除，此操作不可撤销。
                 </p>
-                <div className="pt-1 text-[11px] text-amber-700 border-t border-amber-200/60">
+                <div className="pt-1 text-micro text-timeout border-t border-timeout-border/60">
                   🛡️ <strong>安全保障</strong>：仅清除当前 Argus 本地记录，<strong>Langfuse 中的 Dataset / Trace 记录不会被删除</strong>。
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                  请输入 Agent 全称 <span className="text-rose-600 font-bold select-all">"{agent.name}"</span> 以确认：
+                  请输入 Agent 全称 <span className="text-fail font-bold select-all">"{agent.name}"</span> 以确认：
                 </label>
                 <input
                   type="text"
@@ -411,7 +411,7 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
             <button
               type="submit"
               disabled={!canSubmit || mutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-fail-solid hover:bg-fail-solid-hover rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>

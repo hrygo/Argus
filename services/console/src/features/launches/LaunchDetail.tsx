@@ -392,21 +392,21 @@ export const LaunchDetail: React.FC = () => {
       </div>
 
       {actionError && (
-        <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+        <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
           {actionError}
         </div>
       )}
 
       {/* Cancellation Banner */}
       {launch.cancel_requested_at && launch.status !== "CANCELLED" && (
-        <div className="p-3.5 text-xs bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-center justify-between shadow-xs">
+        <div className="p-3.5 text-xs bg-timeout-subtle border border-timeout-border rounded-xl text-timeout-strong flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+            <Clock className="w-4 h-4 text-timeout animate-spin" />
             <span>
               已收到协作取消请求，系统正在等待处于执行态的任务安全终止（状态过渡中：CANCELLING）。
             </span>
           </div>
-          <span className="font-mono text-[11px] text-amber-700">
+          <span className="font-mono text-micro text-timeout">
             申请时间: {new Date(launch.cancel_requested_at).toLocaleTimeString("zh-CN")}
           </span>
         </div>
@@ -448,7 +448,7 @@ export const LaunchDetail: React.FC = () => {
             />
           </div>
           {launch.langfuse_sync_error && (
-            <p className="text-[11px] text-rose-600 mt-1 truncate" title={launch.langfuse_sync_error}>
+            <p className="text-micro text-fail mt-1 truncate" title={launch.langfuse_sync_error}>
               {launch.langfuse_sync_error}
             </p>
           )}
@@ -460,10 +460,10 @@ export const LaunchDetail: React.FC = () => {
           </span>
           <span className="text-base font-bold font-mono text-foreground">
             {itemsError ? (
-              <span className="text-xs text-rose-600">暂不可用</span>
+              <span className="text-xs text-fail">暂不可用</span>
             ) : totalItems !== null && totalItems > 0 ? (
               <>
-                <span className="text-emerald-600">{passedItems}</span>
+                <span className="text-pass">{passedItems}</span>
                 <span className="text-muted-foreground font-normal"> / </span>
                 <span>{totalItems}</span>
                 <span className="text-xs text-muted-foreground font-normal ml-2">
@@ -492,7 +492,7 @@ export const LaunchDetail: React.FC = () => {
               <span>实时执行进度看板</span>
               <span className="font-mono text-primary">({progress.percentage}%)</span>
             </div>
-            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px]">
+            <div className="flex items-center gap-3 text-muted-foreground font-mono text-micro">
               <span>总调用: {progress.attempts} 次</span>
               <span>重试: {progress.retries} 次</span>
             </div>
@@ -501,27 +501,27 @@ export const LaunchDetail: React.FC = () => {
           {/* Progress Bar */}
           <div className="w-full bg-surface-muted rounded-full h-2.5 overflow-hidden flex">
             <div
-              className="bg-emerald-500 h-full transition-all duration-300"
+              className="bg-pass-solid h-full transition-all duration-300"
               style={{ width: `${progress.total > 0 ? (progress.succeeded / progress.total) * 100 : 0}%` }}
               title={`成功: ${progress.succeeded}`}
             />
             <div
-              className="bg-rose-500 h-full transition-all duration-300"
+              className="bg-fail-solid h-full transition-all duration-300"
               style={{ width: `${progress.total > 0 ? (progress.failed / progress.total) * 100 : 0}%` }}
               title={`失败: ${progress.failed}`}
             />
             <div
-              className="bg-amber-400 h-full transition-all duration-300"
+              className="bg-timeout-solid h-full transition-all duration-300"
               style={{ width: `${progress.total > 0 ? (progress.timed_out / progress.total) * 100 : 0}%` }}
               title={`超时: ${progress.timed_out}`}
             />
             <div
-              className="bg-sky-400 h-full transition-all duration-300 animate-pulse"
+              className="bg-running-solid h-full transition-all duration-300 animate-pulse"
               style={{ width: `${progress.total > 0 ? (progress.running / progress.total) * 100 : 0}%` }}
               title={`运行中: ${progress.running}`}
             />
             <div
-              className="bg-yellow-400 h-full transition-all duration-300"
+              className="bg-retry-solid h-full transition-all duration-300"
               style={{ width: `${progress.total > 0 ? (progress.retry_wait / progress.total) * 100 : 0}%` }}
               title={`等待重试: ${progress.retry_wait}`}
             />
@@ -535,35 +535,35 @@ export const LaunchDetail: React.FC = () => {
           {/* Grid Counts */}
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-1">
             <div className="text-center p-2 rounded-lg bg-canvas border border-border">
-              <span className="text-[11px] text-muted-foreground block">总用例</span>
+              <span className="text-micro text-muted-foreground block">总用例</span>
               <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.total}</span>
             </div>
             <div className="text-center p-2 rounded-lg bg-primary-subtle/60 border border-primary-border">
-              <span className="text-[11px] text-primary block">排队中</span>
+              <span className="text-micro text-primary block">排队中</span>
               <span className="text-sm font-bold font-mono text-primary-strong">{progress.queued + progress.pending}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-sky-50/60 border border-sky-100">
-              <span className="text-[11px] text-sky-600 block">运行中</span>
-              <span className="text-sm font-bold font-mono text-sky-700">{progress.running}</span>
+            <div className="text-center p-2 rounded-lg bg-running-subtle/60 border border-running-border">
+              <span className="text-micro text-running block">运行中</span>
+              <span className="text-sm font-bold font-mono text-running-strong">{progress.running}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-emerald-50/60 border border-emerald-100">
-              <span className="text-[11px] text-emerald-600 block">成功</span>
-              <span className="text-sm font-bold font-mono text-emerald-700">{progress.succeeded}</span>
+            <div className="text-center p-2 rounded-lg bg-pass-subtle/60 border border-pass-border">
+              <span className="text-micro text-pass block">成功</span>
+              <span className="text-sm font-bold font-mono text-pass-strong">{progress.succeeded}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-rose-50/60 border border-rose-100">
-              <span className="text-[11px] text-rose-600 block">失败</span>
-              <span className="text-sm font-bold font-mono text-rose-700">{progress.failed}</span>
+            <div className="text-center p-2 rounded-lg bg-fail-subtle/60 border border-fail-border">
+              <span className="text-micro text-fail block">失败</span>
+              <span className="text-sm font-bold font-mono text-fail">{progress.failed}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-amber-50/60 border border-amber-100">
-              <span className="text-[11px] text-amber-600 block">超时</span>
-              <span className="text-sm font-bold font-mono text-amber-700">{progress.timed_out}</span>
+            <div className="text-center p-2 rounded-lg bg-timeout-subtle/60 border border-timeout-border">
+              <span className="text-micro text-timeout block">超时</span>
+              <span className="text-sm font-bold font-mono text-timeout">{progress.timed_out}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-yellow-50/60 border border-yellow-100">
-              <span className="text-[11px] text-yellow-600 block">等待重试</span>
-              <span className="text-sm font-bold font-mono text-yellow-700">{progress.retry_wait}</span>
+            <div className="text-center p-2 rounded-lg bg-retry-subtle/60 border border-retry-border">
+              <span className="text-micro text-retry block">等待重试</span>
+              <span className="text-sm font-bold font-mono text-retry">{progress.retry_wait}</span>
             </div>
             <div className="text-center p-2 rounded-lg bg-surface-muted border border-border">
-              <span className="text-[11px] text-muted-foreground block">已取消</span>
+              <span className="text-micro text-muted-foreground block">已取消</span>
               <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.cancelled}</span>
             </div>
           </div>
@@ -580,14 +580,14 @@ export const LaunchDetail: React.FC = () => {
             </h3>
             <span
               data-testid="manifest-schema-version"
-              className="px-2 py-0.5 rounded text-[11px] font-mono bg-primary-subtle text-primary-strong border border-primary-border font-semibold"
+              className="px-2 py-0.5 rounded text-micro font-mono bg-primary-subtle text-primary-strong border border-primary-border font-semibold"
             >
               Schema v{manifest.schema_version || manifest.manifest_version || "1.0"}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-muted-foreground hidden sm:inline">
+            <span className="text-micro text-muted-foreground hidden sm:inline">
               严格固定执行时规格，不随 Registry 后续变更漂移
             </span>
             <button
@@ -619,11 +619,11 @@ export const LaunchDetail: React.FC = () => {
               </div>
               <div className="truncate" title={manifestAgent.endpoint || ""}>
                 <span className="text-muted-foreground">Endpoint:</span>{" "}
-                <span className="font-mono text-[11px]">{manifestAgent.endpoint || "-"}</span>
+                <span className="font-mono text-micro">{manifestAgent.endpoint || "-"}</span>
               </div>
               <div className="truncate" title={manifestAgent.spec_digest || ""}>
                 <span className="text-muted-foreground">Digest:</span>{" "}
-                <span className="font-mono text-[11px]">{manifestAgent.spec_digest?.slice(0, 12)}...</span>
+                <span className="font-mono text-micro">{manifestAgent.spec_digest?.slice(0, 12)}...</span>
               </div>
             </div>
           </div>
@@ -641,13 +641,13 @@ export const LaunchDetail: React.FC = () => {
               </div>
               <div>
                 <span className="text-muted-foreground">Version:</span>{" "}
-                <span className="font-mono text-[11px] block truncate" title={manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || ""}>
+                <span className="font-mono text-micro block truncate" title={manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || ""}>
                   {manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || "-"}
                 </span>
               </div>
               <div className="truncate" title={manifest.dataset?.snapshot_digest || ""}>
                 <span className="text-muted-foreground">Digest:</span>{" "}
-                <span data-testid="dataset-snapshot-digest" className="font-mono text-[11px]">
+                <span data-testid="dataset-snapshot-digest" className="font-mono text-micro">
                   {manifest.dataset?.snapshot_digest ? `${manifest.dataset.snapshot_digest.slice(0, 12)}...` : "-"}
                 </span>
               </div>
@@ -663,7 +663,7 @@ export const LaunchDetail: React.FC = () => {
           {/* Dimension 3: Evaluators */}
           <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
             <div className="flex items-center gap-1.5 font-semibold text-foreground">
-              <Zap className="w-4 h-4 text-amber-500" />
+              <Zap className="w-4 h-4 text-timeout" />
               <span>3. 评测门禁指标 ({manifestEvaluators.length})</span>
             </div>
             <div className="flex flex-wrap gap-1">
@@ -672,7 +672,7 @@ export const LaunchDetail: React.FC = () => {
                 return (
                   <span
                     key={evalId}
-                    className="px-2 py-0.5 rounded text-[11px] font-mono bg-surface border border-border text-foreground-secondary"
+                    className="px-2 py-0.5 rounded text-micro font-mono bg-surface border border-border text-foreground-secondary"
                   >
                     {evalId}
                   </span>
@@ -684,19 +684,19 @@ export const LaunchDetail: React.FC = () => {
           {/* Dimension 4: Execution Policy & Runner */}
           <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
             <div className="flex items-center gap-1.5 font-semibold text-foreground">
-              <Sliders className="w-4 h-4 text-emerald-600" />
+              <Sliders className="w-4 h-4 text-pass" />
               <span>4. Runner 与调度策略</span>
             </div>
             <div className="space-y-1 text-foreground-secondary">
               <div>
                 <span className="text-muted-foreground">Runner Ver:</span>{" "}
-                <span data-testid="runner-version" className="font-mono text-[11px]">
+                <span data-testid="runner-version" className="font-mono text-micro">
                   {manifestRunner.runner_version || "1.0.0"}
                 </span>
               </div>
               <div className="truncate" title={manifestRunner.mapping_engine_version || ""}>
                 <span className="text-muted-foreground">Engine:</span>{" "}
-                <span className="font-mono text-[11px]">{manifestRunner.mapping_engine_version || "-"}</span>
+                <span className="font-mono text-micro">{manifestRunner.mapping_engine_version || "-"}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Concurrency:</span>{" "}
@@ -740,14 +740,14 @@ export const LaunchDetail: React.FC = () => {
 
       {/* Retry Failed Confirmation Modal */}
       {showRetryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/40 backdrop-blur-xs p-4">
           <div className="bg-surface rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-border">
             <h3 className="text-base font-bold text-foreground">重试失败用例 (Retry Failed Items)</h3>
             <p className="text-xs text-foreground-secondary leading-relaxed">
-              系统将仅针对执行失败 (<code className="text-rose-600 font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-amber-600 font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
+              系统将仅针对执行失败 (<code className="text-fail font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-timeout font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
             </p>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+            <div className="p-3 bg-timeout-subtle border border-timeout-border rounded-xl space-y-2">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -755,7 +755,7 @@ export const LaunchDetail: React.FC = () => {
                   onChange={(e) => setForceRetry(e.target.checked)}
                   className="mt-0.5 rounded text-primary focus:ring-focus"
                 />
-                <span className="text-xs text-amber-900">
+                <span className="text-xs text-timeout-strong">
                   <strong className="block font-semibold">强制重试非幂等可能已发送用例 (Force Replay)</strong>
                   若用例在 Worker 崩溃前可能已将请求发出且接口非幂等，勾选此项以确认允许二次执行。
                 </span>
@@ -774,7 +774,7 @@ export const LaunchDetail: React.FC = () => {
                 type="button"
                 disabled={retryFailedMutation.isPending}
                 onClick={() => retryFailedMutation.mutate(forceRetry)}
-                className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-xs cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 text-xs font-semibold text-white bg-timeout-solid hover:bg-timeout-solid-hover rounded-lg shadow-xs cursor-pointer disabled:opacity-50"
               >
                 {retryFailedMutation.isPending ? "正在提交重试..." : "确认重新调度"}
               </button>

@@ -48,11 +48,11 @@ export const router = createBrowserRouter([
         path: "*",
         element: (
           <div className="py-20 text-center space-y-3">
-            <h2 className="text-xl font-bold text-slate-800">404 - 页面未找到</h2>
-            <p className="text-xs text-slate-500">请求的页面不存在或已被移除。</p>
+            <h2 className="text-xl font-bold text-foreground">404 - 页面未找到</h2>
+            <p className="text-xs text-foreground-secondary">请求的页面不存在或已被移除。</p>
             <a
               href="/launches"
-              className="inline-block px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+              className="inline-block px-4 py-2 text-xs font-semibold text-white bg-queued-solid rounded-lg hover:bg-queued-solid-hover"
             >
               返回评测列表
             </a>

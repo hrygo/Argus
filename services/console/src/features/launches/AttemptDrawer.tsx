@@ -62,7 +62,7 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-overlay/40 backdrop-blur-xs transition-opacity"
         onClick={onClose}
       />
 
@@ -117,17 +117,17 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
                           第 {attempt.attempt_no} 次调用尝试
                         </span>
                         {attempt.worker_id && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-muted text-foreground-secondary border border-border">
+                          <span className="px-2 py-0.5 rounded text-2xs font-mono bg-surface-muted text-foreground-secondary border border-border">
                             {attempt.worker_id}
                           </span>
                         )}
                         {attempt.request_phase && (
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                            className={`px-2 py-0.5 rounded text-2xs font-mono font-semibold ${
                               attempt.request_phase === "RESPONSE_RECEIVED"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                ? "bg-pass-subtle text-pass-strong border border-pass-border"
                                 : attempt.request_phase === "MAY_HAVE_BEEN_SENT"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                ? "bg-timeout-subtle text-timeout border border-timeout-border"
                                 : "bg-surface-muted text-foreground-secondary border border-border"
                             }`}
                           >
@@ -141,8 +141,8 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
                           <span
                             className={`px-2 py-0.5 rounded font-mono font-semibold ${
                               isSuccess
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-rose-50 text-rose-700 border border-rose-200"
+                                ? "bg-pass-subtle text-pass-strong border border-pass-border"
+                                : "bg-fail-subtle text-fail border border-fail-border"
                             }`}
                           >
                             HTTP {attempt.http_status}
@@ -162,14 +162,14 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
                     <div className="p-4 space-y-3 text-xs">
                       {/* Trace Context */}
                       <div>
-                        <span className="text-[11px] font-medium text-muted-foreground block mb-1 flex items-center gap-1">
+                        <span className="text-micro font-medium text-muted-foreground block mb-1 flex items-center gap-1">
                           <Network className="w-3 h-3 text-primary" />
                           跨系统调用跟踪 (W3C Trace Context)
                         </span>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-micro font-medium ${
                             attempt.trace_context_received
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              ? "bg-pass-subtle text-pass-strong border border-pass-border"
                               : "bg-surface-muted text-muted-foreground border border-border"
                           }`}
                         >
@@ -179,12 +179,12 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
 
                       {/* Ambiguous Outcome Alert */}
                       {attempt.error_type === "AMBIGUOUS_OUTCOME" && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 space-y-1">
+                        <div className="p-3 bg-timeout-subtle border border-timeout-border rounded-lg text-timeout-strong space-y-1">
                           <div className="flex items-center gap-1.5 font-bold text-xs">
-                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            <AlertCircle className="w-4 h-4 text-timeout" />
                             <span>非幂等请求结果未决 (AMBIGUOUS_OUTCOME)</span>
                           </div>
-                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                          <p className="text-micro text-timeout-strong leading-relaxed">
                             当前被测 Agent 标记为非幂等，且 Worker 在请求发送后或网络中断期间崩溃。为防资金或业务重复扣款，系统已安全熔断重试。需在详情页点击“重试失败用例”并勾选强制重放确认后方可重新执行。
                           </p>
                         </div>
@@ -192,16 +192,16 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
 
                       {/* Error Banner */}
                       {attempt.error_message && attempt.error_type !== "AMBIGUOUS_OUTCOME" && (
-                        <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-lg text-rose-800 space-y-1">
+                        <div className="p-3 bg-fail-subtle/80 border border-fail-border rounded-lg text-fail-strong space-y-1">
                           <div className="flex items-center gap-1.5 font-semibold">
-                            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                            <AlertCircle className="w-3.5 h-3.5 text-fail" />
                             <span>{attempt.error_type || "执行异常"}</span>
                           </div>
-                          <p className="font-mono text-[11px] whitespace-pre-wrap">{attempt.error_message}</p>
+                          <p className="font-mono text-micro whitespace-pre-wrap">{attempt.error_message}</p>
                         </div>
                       )}
 
-                      <div className="pt-2 text-[11px] text-muted-foreground flex items-center justify-between border-t border-border">
+                      <div className="pt-2 text-micro text-muted-foreground flex items-center justify-between border-t border-border">
                         <span>Attempt ID: {attempt.id}</span>
                         <span>{new Date(attempt.started_at).toLocaleString("zh-CN", { hour12: false })}</span>
                       </div>

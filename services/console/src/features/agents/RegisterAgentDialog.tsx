@@ -60,7 +60,7 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 backdrop-blur-xs p-4">
       <div className="bg-surface rounded-xl shadow-xl border border-border w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2 text-foreground">
@@ -77,14 +77,14 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+            <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
             </div>
           )}
 
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1">
-              Agent ID <span className="text-rose-500">*</span>
+              Agent ID <span className="text-fail">*</span>
             </label>
             <input
               type="text"
@@ -94,12 +94,12 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
               onChange={(e) => setId(e.target.value)}
               className="ui-control w-full text-sm font-mono"
             />
-            <p className="text-[11px] text-muted-foreground mt-1">全局唯一标识符，建议小写字母加中划线</p>
+            <p className="text-micro text-muted-foreground mt-1">全局唯一标识符，建议小写字母加中划线</p>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1">
-              显示名称 <span className="text-rose-500">*</span>
+              显示名称 <span className="text-fail">*</span>
             </label>
             <input
               type="text"

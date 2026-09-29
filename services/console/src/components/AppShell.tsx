@@ -48,7 +48,7 @@ export const AppShell: React.FC = () => {
             : "无法获取 Langfuse Dashboard 地址";
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `group flex min-h-9 items-center gap-2.5 rounded-md px-3 text-[13px] transition-colors ${
+    `group flex min-h-9 items-center gap-2.5 rounded-md px-3 text-sm transition-colors ${
       isActive
         ? "bg-surface-muted font-semibold text-foreground"
         : "text-foreground-secondary hover:bg-surface-muted hover:text-foreground"
@@ -56,14 +56,14 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-canvas text-foreground">
-      <aside className="flex w-[208px] shrink-0 flex-col border-r border-border bg-surface">
+      <aside className="flex w-sidebar shrink-0 flex-col border-r border-border bg-surface">
         <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
           <div className="flex size-7 items-center justify-center rounded-md bg-primary-subtle text-primary">
             <ShieldCheck aria-hidden="true" className="size-4" />
           </div>
           <div className="min-w-0 leading-tight">
             <span className="block text-sm font-semibold tracking-tight text-foreground">Argus</span>
-            <span className="block text-[10px] text-muted-foreground">Control Plane</span>
+            <span className="block text-2xs text-muted-foreground">Control Plane</span>
           </div>
         </div>
 
@@ -96,7 +96,7 @@ export const AppShell: React.FC = () => {
             <span
               aria-disabled="true"
               aria-live={isPending && !sysInfo ? "polite" : undefined}
-              className="flex min-h-9 items-center gap-2 px-2.5 text-[11px] leading-4 text-muted-foreground"
+              className="flex min-h-9 items-center gap-2 px-2.5 text-micro leading-4 text-muted-foreground"
             >
               <Layers aria-hidden="true" className="size-3.5 shrink-0" />
               <span>{dashboardStatus}</span>
@@ -111,7 +111,7 @@ export const AppShell: React.FC = () => {
             Agent Evaluation Control Plane
           </div>
           {sysInfo && (
-            <div className="flex shrink-0 items-center gap-3 text-[11px] text-muted-foreground">
+            <div className="flex shrink-0 items-center gap-3 text-micro text-muted-foreground">
               <span className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-medium text-foreground-secondary">
                 {sysInfo.environment.toUpperCase()}
               </span>
@@ -124,7 +124,7 @@ export const AppShell: React.FC = () => {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto bg-canvas p-5 sm:p-6">
-          <div className="mx-auto w-full max-w-[1600px]">
+          <div className="mx-auto w-full max-w-content">
             <Outlet />
           </div>
         </main>

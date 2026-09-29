@@ -13,10 +13,10 @@ const OutputPanel: React.FC<{ title: string; side: OutputSide }> = ({ title, sid
   <section aria-label={title} className="min-w-0 space-y-2 rounded-lg border border-border p-3">
     <div className="flex items-center justify-between gap-2">
       <h3 className="font-semibold">{title}</h3>
-      <span className="rounded bg-canvas px-2 py-1 text-[11px]">{side.output_status}</span>
+      <span className="rounded bg-canvas px-2 py-1 text-micro">{side.output_status}</span>
     </div>
     {side.reason && <p className="text-xs text-muted-foreground">{side.reason}</p>}
-    {side.truncated && <p className="text-xs text-amber-700">输出过大，已截断显示。</p>}
+    {side.truncated && <p className="text-xs text-timeout">输出过大，已截断显示。</p>}
     {side.output_status === "AVAILABLE" && <JsonViewer data={side.output} title={`${title} Agent Output`} />}
     <JsonViewer data={side.scores ?? {}} title={`${title} Scores`} />
     {side.trace_url && <a className="inline-block text-xs text-primary hover:underline" href={side.trace_url} target="_blank" rel="noreferrer">打开 Trace</a>}
@@ -102,7 +102,7 @@ export const ComparisonCaseDrawer: React.FC<{
           <Button ref={closeButtonRef} variant="secondary" className="text-xs" onClick={close}>关闭</Button>
         </div>
         {query.isPending && <p role="status" className="text-sm text-muted-foreground">正在读取冻结 Observation…</p>}
-        {query.error && <div role="alert" className="space-y-2 text-sm text-rose-700">
+        {query.error && <div role="alert" className="space-y-2 text-sm text-fail">
           <p>读取 Case 详情失败：{formatApiError(query.error)}</p>
           <Button variant="secondary" className="text-xs" onClick={() => query.refetch()} disabled={query.isFetching}>重试</Button>
         </div>}

@@ -285,10 +285,10 @@ export const ComparisonReport: React.FC<{
         </div>
       </div>
 
-      {setBaselineMutation.error && <p role="alert" className="text-xs text-rose-700">{formatApiError(setBaselineMutation.error)}</p>}
-      {summaryQuery.error && <p role="alert" className="text-xs text-rose-700">{formatApiError(summaryQuery.error)}</p>}
-      {comparisonQuery.error && <p role="alert" className="text-xs text-rose-700">{formatApiError(comparisonQuery.error)}</p>}
-      {activeBaselineQuery.error && <p role="alert" className="text-xs text-rose-700">Baseline 查询失败：{formatApiError(activeBaselineQuery.error)}</p>}
+      {setBaselineMutation.error && <p role="alert" className="text-xs text-fail">{formatApiError(setBaselineMutation.error)}</p>}
+      {summaryQuery.error && <p role="alert" className="text-xs text-fail">{formatApiError(summaryQuery.error)}</p>}
+      {comparisonQuery.error && <p role="alert" className="text-xs text-fail">{formatApiError(comparisonQuery.error)}</p>}
+      {activeBaselineQuery.error && <p role="alert" className="text-xs text-fail">Baseline 查询失败：{formatApiError(activeBaselineQuery.error)}</p>}
 
       {metrics && (
         <div className="space-y-3">
@@ -394,7 +394,7 @@ export const ComparisonReport: React.FC<{
               </Button>
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             只在同一 Dataset、相同 Case 内容与 Evaluator 契约上分类；全量运行健康与共同样本质量分别统计。Case 输出按当前固定 Snapshot 延迟读取；不可用指标显示为 —，不会按 0 参与比较。
           </p>
         </>
@@ -415,9 +415,9 @@ export const ComparisonReport: React.FC<{
 
 const Metric: React.FC<{ label: string; value: string; detail?: string }> = ({ label, value, detail }) => (
   <div className="rounded-lg border border-border bg-canvas/70 p-3">
-    <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
+    <div className="text-micro font-medium text-muted-foreground">{label}</div>
     <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
-    {detail && <div className="mt-0.5 text-[11px] text-muted-foreground">{detail}</div>}
+    {detail && <div className="mt-0.5 text-micro text-muted-foreground">{detail}</div>}
   </div>
 );
 
@@ -425,6 +425,7 @@ const VersionCard: React.FC<{ title: string; versions: any; snapshotId: string |
   <div className="rounded-lg border border-border bg-canvas/60 p-3 text-xs">
     <strong>{title}</strong>
     {versions ? (
+      // token-lint-ignore: intrinsic two-column definition list, not a design token.
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
         <dt className="text-muted-foreground">Agent</dt><dd className="truncate font-mono">{versions.agent?.id}@{versions.agent?.version}</dd>
         <dt className="text-muted-foreground">Dataset</dt><dd className="truncate font-mono">{versions.dataset?.name}@{versions.dataset?.version}</dd>

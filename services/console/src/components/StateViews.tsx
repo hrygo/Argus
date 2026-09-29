@@ -22,10 +22,10 @@ export const EmptyState: React.FC<{ title: string; description?: string; action?
 );
 
 export const ErrorState: React.FC<{ message: string; onRetry?: () => void }> = ({ message, onRetry }) => (
-  <div role="alert" data-testid="error-state" className="flex flex-col items-center justify-center rounded-lg border border-rose-200 bg-rose-50 p-8 text-center">
-    <AlertCircle className="w-8 h-8 text-rose-500 mb-2" />
-    <h3 className="text-sm font-semibold text-rose-800">请求失败</h3>
-    <p className="text-xs text-rose-600 mt-1 max-w-md">{message}</p>
+  <div role="alert" data-testid="error-state" className="flex flex-col items-center justify-center rounded-lg border border-fail-border bg-fail-subtle p-8 text-center">
+    <AlertCircle className="w-8 h-8 text-fail mb-2" />
+    <h3 className="text-sm font-semibold text-fail-strong">请求失败</h3>
+    <p className="text-xs text-fail mt-1 max-w-md">{message}</p>
     {onRetry && (
       <button
         onClick={onRetry}

@@ -66,7 +66,7 @@ describe("LaunchesList High-Density Table & Information Hierarchy (Issue #26)", 
     },
   ];
 
-  it("renders table with fixed layout, min-w-[1200px], and simplified headers", async () => {
+  it("renders table with fixed layout, min-w-table-xl, and simplified headers", async () => {
     (api.GET as any).mockImplementation((path: string) => {
       if (path === "/api/v1/experiment-launches") {
         return Promise.resolve({ data: mockLaunches });
@@ -91,7 +91,7 @@ describe("LaunchesList High-Density Table & Information Hierarchy (Issue #26)", 
 
     const table = screen.getByRole("table");
     expect(table).toHaveClass("table-fixed");
-    expect(table).toHaveClass("min-w-[1132px]");
+    expect(table).toHaveClass("min-w-table-lg");
 
     // Simplified headers without long verbose titles
     expect(screen.getByRole("columnheader", { name: "Launch" })).toBeInTheDocument();

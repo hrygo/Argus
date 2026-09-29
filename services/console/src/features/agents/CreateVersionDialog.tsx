@@ -95,7 +95,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-surface rounded-xl shadow-xl border border-border w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2 text-foreground">
@@ -110,9 +110,9 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-code-panel overflow-y-auto">
           {errorMsg && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+            <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
             </div>
           )}
@@ -121,7 +121,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
             <div>
               <div className="flex items-center gap-1.5 mb-1">
                 <label className="text-xs font-semibold text-foreground-secondary">
-                  版本号 (Tag) <span className="text-rose-500">*</span>
+                  版本号 (Tag) <span className="text-fail">*</span>
                 </label>
                 <FieldHelp {...AGENT_VERSION_FIELD_HELPS.version} />
               </div>
@@ -133,7 +133,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                 onChange={(e) => setVersion(e.target.value)}
                 className="ui-control w-full text-sm font-mono"
               />
-              <p className="text-[11px] text-muted-foreground mt-1">创建后将永久冻结且不可变</p>
+              <p className="text-micro text-muted-foreground mt-1">创建后将永久冻结且不可变</p>
             </div>
 
             <div>
@@ -154,7 +154,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
           <div>
             <div className="flex items-center gap-1.5 mb-1">
               <label className="text-xs font-semibold text-foreground-secondary">
-                远程调用端点 (HTTP POST) <span className="text-rose-500">*</span>
+                远程调用端点 (HTTP POST) <span className="text-fail">*</span>
               </label>
               <FieldHelp {...AGENT_VERSION_FIELD_HELPS.endpoint} />
             </div>
@@ -231,7 +231,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                 onChange={(e) => setCredentialRef(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-border-strong rounded-lg font-mono"
               />
-              <p className="text-[11px] text-muted-foreground mt-1">仅存储引用标识，禁止存入明文 Secret</p>
+              <p className="text-micro text-muted-foreground mt-1">仅存储引用标识，禁止存入明文 Secret</p>
             </div>
 
             <div>
@@ -260,7 +260,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
               onChange={(e) => setRequestMappingStr(e.target.value)}
               className="ui-control w-full text-xs font-mono"
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-micro text-muted-foreground mt-1">
               点路径映射关系，例如：{`{"query": "input.user_message"}`}
             </p>
           </div>

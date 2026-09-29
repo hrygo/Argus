@@ -232,7 +232,7 @@ export const CreateLaunch: React.FC = () => {
       </div>
 
       {formError && (
-        <div className="p-3.5 text-xs bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-medium">
+        <div className="p-3.5 text-xs bg-fail-subtle border border-fail-border rounded-xl text-fail font-medium">
           {formError}
         </div>
       )}
@@ -271,7 +271,7 @@ export const CreateLaunch: React.FC = () => {
               placeholder="production"
               className="ui-control w-full sm:w-96 text-xs"
             />
-            <p className="mt-1 text-[11px] text-muted-foreground">按 Agent + Environment 自动冻结当前 Baseline。</p>
+            <p className="mt-1 text-micro text-muted-foreground">按 Agent + Environment 自动冻结当前 Baseline。</p>
           </div>
         </div>
 
@@ -285,7 +285,7 @@ export const CreateLaunch: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                选择 Agent <span className="text-rose-500">*</span>
+                选择 Agent <span className="text-fail">*</span>
               </label>
               <select
                 value={selectedAgentId}
@@ -303,7 +303,7 @@ export const CreateLaunch: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                选择版本规格 (Active Version) <span className="text-rose-500">*</span>
+                选择版本规格 (Active Version) <span className="text-fail">*</span>
               </label>
               <select
                 value={selectedAgentVersion}
@@ -323,7 +323,7 @@ export const CreateLaunch: React.FC = () => {
                 ))}
               </select>
               {versions && versions.length === 0 && (
-                <p className="text-[11px] text-rose-500 mt-1">
+                <p className="text-micro text-fail mt-1">
                   当前 Agent 没有处于 ACTIVE 状态的版本。请先去 Agent 详情页创建新版本。
                 </p>
               )}
@@ -341,7 +341,7 @@ export const CreateLaunch: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                数据集名称 (Dataset Name) <span className="text-rose-500">*</span>
+                数据集名称 (Dataset Name) <span className="text-fail">*</span>
               </label>
               <input
                 type="text"
@@ -355,7 +355,7 @@ export const CreateLaunch: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                数据集版本模式 (Dataset Version) <span className="text-rose-500">*</span>
+                数据集版本模式 (Dataset Version) <span className="text-fail">*</span>
               </label>
               <div className="flex items-center gap-4 py-1 text-xs">
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -408,6 +408,7 @@ export const CreateLaunch: React.FC = () => {
           <fieldset className="space-y-3">
             <legend className="sr-only">选择评测结果模式</legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* token-lint-ignore: has-[...] takes a selector, not a token value. */}
               <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-canvas cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary-subtle/50">
                 <input
                   type="radio"
@@ -418,11 +419,12 @@ export const CreateLaunch: React.FC = () => {
                 />
                 <span>
                   <span className="block text-xs font-semibold text-foreground">逐项诊断（推荐）</span>
-                  <span className="block text-[11px] text-muted-foreground mt-1">
+                  <span className="block text-micro text-muted-foreground mt-1">
                     分别记录各项评分，便于定位失败原因。所有已选指标达到阈值时，用例质量结论为通过；取消的指标不参与本次判定。
                   </span>
                 </span>
               </label>
+              {/* token-lint-ignore: has-[...] takes a selector, not a token value. */}
               <label className={`flex items-start gap-3 p-3 rounded-lg border border-border ${compositeEvaluator ? "bg-canvas cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary-subtle/50" : "bg-surface-muted text-muted-foreground cursor-not-allowed"}`}>
                 <input
                   type="radio"
@@ -434,7 +436,7 @@ export const CreateLaunch: React.FC = () => {
                 />
                 <span>
                   <span className="block text-xs font-semibold text-foreground">复合结论</span>
-                  <span className="block text-[11px] text-muted-foreground mt-1">
+                  <span className="block text-micro text-muted-foreground mt-1">
                     只记录一个复合评分{compositeEvaluator ? `（${compositeEvaluator.id}）` : ""}；
                     {compositeEvaluator ? composedOf(compositeEvaluator).join("、") : "复合 Evaluator 尚不可用"} 均通过时，用例质量结论才通过，不额外记录组成项的独立评分。
                   </span>
@@ -443,14 +445,14 @@ export const CreateLaunch: React.FC = () => {
             </div>
           </fieldset>
 
-          <p className="text-[11px] text-muted-foreground" role="note">
+          <p className="text-micro text-muted-foreground" role="note">
             当前内置版本及默认阈值下，两种默认配置的质量通过条件等价，但结果明细不同；执行成功不等于质量通过。切换模式会重置指标选择。
           </p>
 
           {hasInvalidSelection && (
-            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-3 space-y-2" role="alert">
+            <div className="text-xs text-fail bg-fail-subtle border border-fail-border rounded-lg p-3 space-y-2" role="alert">
               <p>Evaluator 目录已变化，当前选择不再有效。重新应用当前可用的逐项诊断默认指标后再创建 Launch。</p>
-              <button type="button" onClick={selectDiagnosticMode} className="font-semibold underline underline-offset-2 focus:outline-hidden focus:ring-2 focus:ring-rose-500 rounded-sm">
+              <button type="button" onClick={selectDiagnosticMode} className="font-semibold underline underline-offset-2 focus:outline-hidden focus:ring-2 focus:ring-fail rounded-sm">
                 重新选择逐项诊断默认指标
               </button>
             </div>
@@ -489,12 +491,12 @@ export const CreateLaunch: React.FC = () => {
                     <span>
                       <span className="flex items-center gap-2 font-semibold text-foreground">
                         <span className={!isItemScope ? "text-muted-foreground" : ""}>{ev.id}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-mono ${isItemScope ? "bg-surface-muted text-foreground-secondary" : "bg-amber-100 text-amber-700"}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-2xs uppercase font-mono ${isItemScope ? "bg-surface-muted text-foreground-secondary" : "bg-timeout-subtle text-timeout"}`}>
                           {ev.scope}
                         </span>
-                        {!isItemScope && <span className="text-[10px] text-amber-600 font-normal">（聚合指标，暂不支持在单次 Launch 中直接运行）</span>}
+                        {!isItemScope && <span className="text-2xs text-timeout font-normal">（聚合指标，暂不支持在单次 Launch 中直接运行）</span>}
                       </span>
-                      <span className="block text-[11px] text-muted-foreground mt-0.5">{ev.description || "确定性规则评测器"}</span>
+                      <span className="block text-micro text-muted-foreground mt-0.5">{ev.description || "确定性规则评测器"}</span>
                     </span>
                   </label>
                 );
@@ -522,7 +524,7 @@ export const CreateLaunch: React.FC = () => {
               onChange={(e) => setConcurrency(Math.max(1, parseInt(e.target.value) || 1))}
               className="ui-control w-full text-xs"
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-micro text-muted-foreground mt-1">
               受 AgentVersion 配置的最大并发数限制，推荐 1~3。
             </p>
           </div>

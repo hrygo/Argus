@@ -65,7 +65,7 @@ export const AgentsList: React.FC = () => {
         <Panel className="ui-table-shell">
           <div className="overflow-x-auto">
             <table className="ui-table w-full text-sm text-foreground-secondary">
-              <thead className="bg-surface-muted border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <thead className="bg-surface-muted border-b border-border text-micro font-semibold text-muted-foreground uppercase tracking-wider">
                 <tr>
                   <th className="px-3 py-2.5">Agent / ID</th>
                   <th className="px-3 py-2.5">负责人 / 团队</th>
@@ -139,7 +139,7 @@ export const AgentsList: React.FC = () => {
                           <Badge
                             tone="info"
                             title="活跃评测包含待执行、排队中、运行中、取消中等尚未结束状态的 Launch。"
-                            className="rounded-full px-1.5 text-[10px]"
+                            className="rounded-full px-1.5 text-2xs"
                           >
                             {agent.active_launch_count} 条活跃评测
                           </Badge>
@@ -173,7 +173,7 @@ export const AgentsList: React.FC = () => {
                               active_launch_count: agent.active_launch_count,
                             });
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-fail transition-colors cursor-pointer"
                           title="删除 Agent"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
