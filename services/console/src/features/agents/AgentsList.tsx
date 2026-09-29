@@ -110,7 +110,7 @@ export const AgentsList: React.FC = () => {
                     </td>
 
                     <td className="px-3 py-2.5">
-                      <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "success" : "neutral"}>
+                      <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "pass" : "neutral"}>
                         {agent.status.toUpperCase()}
                       </Badge>
                     </td>
@@ -137,7 +137,7 @@ export const AgentsList: React.FC = () => {
                         <span>{agent.launch_count ?? 0}</span>
                         {(agent.active_launch_count ?? 0) > 0 && (
                           <Badge
-                            tone="info"
+                            tone="running"
                             title="活跃评测包含待执行、排队中、运行中、取消中等尚未结束状态的 Launch。"
                             className="rounded-full px-1.5 text-2xs"
                           >

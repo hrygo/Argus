@@ -15,13 +15,13 @@ export const SyncStatusBadge: React.FC<SyncStatusBadgeProps> = ({
   const normalized = status?.toUpperCase() || "PENDING";
   const tone: BadgeTone =
     normalized === "SYNCED"
-      ? "success"
+      ? "pass"
       : normalized === "FAILED"
-        ? "danger"
+        ? "fail"
         : normalized === "SYNCING"
-          ? "info"
+          ? "running"
           : normalized === "PENDING"
-            ? "warning"
+            ? "queued"
             : "neutral";
 
   return (

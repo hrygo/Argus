@@ -10,7 +10,7 @@ interface QualityBadgeProps {
 
 export const QualityBadge: React.FC<QualityBadgeProps> = ({ quality, className = "" }) => {
   const normalized = (quality || "unknown").toLowerCase();
-  const tone: BadgeTone = normalized === "pass" ? "success" : normalized === "fail" ? "danger" : "neutral";
+  const tone: BadgeTone = normalized === "pass" ? "pass" : normalized === "fail" ? "fail" : "neutral";
   const label = normalized === "pass" ? "PASS" : normalized === "fail" ? "FAIL" : "UNKNOWN";
 
   return <Badge tone={tone} data-testid="quality-badge" data-tone={tone} className={className}>{label}</Badge>;

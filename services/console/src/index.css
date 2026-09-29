@@ -221,20 +221,32 @@
     @apply border-border bg-surface-muted text-foreground-secondary;
   }
 
-  .ui-badge--info {
+  .ui-badge--queued {
+    @apply border-queued-border bg-queued-subtle text-queued;
+  }
+
+  .ui-badge--running {
     @apply border-running-border bg-running-subtle text-running;
   }
 
-  .ui-badge--success {
+  .ui-badge--pass {
     @apply border-pass-border bg-pass-subtle text-pass;
   }
 
-  .ui-badge--warning {
+  .ui-badge--fail {
+    @apply border-fail-border bg-fail-subtle text-fail;
+  }
+
+  .ui-badge--timeout {
     @apply border-timeout-border bg-timeout-subtle text-timeout;
   }
 
-  .ui-badge--danger {
-    @apply border-fail-border bg-fail-subtle text-fail;
+  .ui-badge--retry {
+    @apply border-retry-border bg-retry-subtle text-retry;
+  }
+
+  .ui-badge--cancelled {
+    @apply border-cancelled-border bg-cancelled-subtle text-cancelled;
   }
 
   .ui-table-shell {

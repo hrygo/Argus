@@ -92,7 +92,7 @@ export const AgentVersionDetail: React.FC = () => {
               <span className="break-all">{agentId}</span>
               <span className="text-muted-foreground font-normal">@</span>
               <span className="font-mono text-primary">{versionData.version}</span>
-              <Badge tone={versionData.is_active ? "success" : "neutral"}>
+              <Badge tone={versionData.is_active ? "pass" : "neutral"}>
                 {versionData.is_active ? "ACTIVE" : "ARCHIVED"}
               </Badge>
             </span>
@@ -234,7 +234,7 @@ export const AgentVersionDetail: React.FC = () => {
 
             <div className="col-span-2 p-3 bg-canvas rounded-lg border border-border flex items-center justify-between">
               <span className="text-muted-foreground">幂等安全 (Is Idempotent):</span>
-              <Badge tone={versionData.is_idempotent ? "success" : "neutral"}>
+              <Badge tone={versionData.is_idempotent ? "pass" : "neutral"}>
                 {versionData.is_idempotent ? "YES (允许安全重试)" : "NO (非幂等)"}
               </Badge>
             </div>

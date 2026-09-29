@@ -89,7 +89,7 @@ export const AgentDetail: React.FC = () => {
                 <Bot className="h-4 w-4" />
               </span>
               <span className="truncate">{agent.name}</span>
-              <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "success" : "neutral"}>
+              <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "pass" : "neutral"}>
                 {agent.status.toUpperCase()}
               </Badge>
             </span>
@@ -138,7 +138,7 @@ export const AgentDetail: React.FC = () => {
             <span>{agent.launch_count ?? 0} 次</span>
             {(agent.active_launch_count ?? 0) > 0 && (
               <Badge
-                tone="info"
+                tone="running"
                 title="活跃评测包含待执行、排队中、运行中、取消中等尚未结束状态的 Launch。"
                 className="px-1.5 text-2xs"
               >
@@ -207,7 +207,7 @@ export const AgentDetail: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-4">
-                        <Badge tone={ver.is_active ? "success" : "neutral"}>
+                        <Badge tone={ver.is_active ? "pass" : "neutral"}>
                           {ver.is_active ? "ACTIVE" : "ARCHIVED"}
                         </Badge>
                       </td>
