@@ -11,6 +11,7 @@ import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
 import { ErrorState, LoadingState } from "../../components/StateViews";
+import { IconButton } from "../../components/ui/Primitives";
 
 type ExecutionAttempt = import("../../api/schema").components["schemas"]["ExecutionAttemptResponse"];
 
@@ -79,12 +80,9 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
               <p className="text-xs text-muted-foreground font-mono">Case ID: {caseId || itemExecutionId}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-muted-foreground hover:text-foreground-secondary rounded-lg hover:bg-surface-muted transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <IconButton label="关闭 Attempt 详情" onClick={onClose}>
+            <X aria-hidden="true" className="w-5 h-5" />
+          </IconButton>
         </div>
 
         {/* Drawer Body */}

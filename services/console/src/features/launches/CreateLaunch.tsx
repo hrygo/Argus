@@ -13,7 +13,12 @@ import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
 import { ErrorState, LoadingState } from "../../components/StateViews";
-import { Button, PageHeader, buttonClassName } from "../../components/ui/Primitives";
+import {
+  Button,
+  Field,
+  PageHeader,
+  buttonClassName,
+} from "../../components/ui/Primitives";
 
 type EvaluatorResponse = import("../../api/schema").components["schemas"]["EvaluatorResponse"];
 type AgentVersionResponse = import("../../api/schema").components["schemas"]["AgentVersionResponse"];
@@ -246,32 +251,46 @@ export const CreateLaunch: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-              评测任务名称 (Launch Name) <span className="text-muted-foreground font-normal">(可选，留空由系统自动命名)</span>
-            </label>
-            <input
-              type="text"
-              value={launchName}
-              onChange={(e) => setLaunchName(e.target.value)}
-              placeholder="例如：release-v1.0-benchmark"
-              className="ui-control w-full sm:w-96 text-xs"
-            />
+            <Field
+              label={
+                <>
+                  评测任务名称 (Launch Name){" "}
+                  <span className="text-muted-foreground font-normal">(可选，留空由系统自动命名)</span>
+                </>
+              }
+            >
+              {({ id }) => (
+                <input
+                  id={id}
+                  type="text"
+                  value={launchName}
+                  onChange={(e) => setLaunchName(e.target.value)}
+                  placeholder="例如：release-v1.0-benchmark"
+                  className="ui-control w-full sm:w-96 text-xs"
+                />
+              )}
+            </Field>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5" htmlFor="launch-environment">
-              Environment
-            </label>
-            <input
-              id="launch-environment"
-              type="text"
-              value={environment}
-              onChange={(e) => setEnvironment(e.target.value)}
-              maxLength={64}
+            <Field
+              label="Environment"
               required
-              placeholder="production"
-              className="ui-control w-full sm:w-96 text-xs"
-            />
-            <p className="mt-1 text-micro text-muted-foreground">按 Agent + Environment 自动冻结当前 Baseline。</p>
+              hint="按 Agent + Environment 自动冻结当前 Baseline。"
+            >
+              {({ id, ...aria }) => (
+                <input
+                  {...aria}
+                  id={id}
+                  type="text"
+                  value={environment}
+                  onChange={(e) => setEnvironment(e.target.value)}
+                  maxLength={64}
+                  required
+                  placeholder="production"
+                  className="ui-control w-full sm:w-96 text-xs"
+                />
+              )}
+            </Field>
           </div>
         </div>
 
@@ -284,44 +303,48 @@ export const CreateLaunch: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                选择 Agent <span className="text-fail">*</span>
-              </label>
-              <select
-                value={selectedAgentId}
-                onChange={(e) => setSelectedAgentId(e.target.value)}
-                required
-                className="ui-control w-full text-xs"
-              >
-                {agents?.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.id})
-                  </option>
-                ))}
-              </select>
+              <Field label="选择 Agent" required>
+                {({ id }) => (
+                  <select
+                    id={id}
+                    value={selectedAgentId}
+                    onChange={(e) => setSelectedAgentId(e.target.value)}
+                    required
+                    className="ui-control w-full text-xs"
+                  >
+                    {agents?.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.id})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Field>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                选择版本规格 (Active Version) <span className="text-fail">*</span>
-              </label>
-              <select
-                value={selectedAgentVersion}
-                onChange={(e) => setSelectedAgentVersion(e.target.value)}
-                disabled={isVersionsLoading || !versions || versions.length === 0}
-                required
-                className="ui-control w-full text-xs font-mono disabled:opacity-50"
-              >
-                {isVersionsLoading && <option>加载版本中...</option>}
-                {!isVersionsLoading && (!versions || versions.length === 0) && (
-                  <option value="">该 Agent 暂无可用的激活版本</option>
+              <Field label="选择版本规格 (Active Version)" required>
+                {({ id }) => (
+                  <select
+                    id={id}
+                    value={selectedAgentVersion}
+                    onChange={(e) => setSelectedAgentVersion(e.target.value)}
+                    disabled={isVersionsLoading || !versions || versions.length === 0}
+                    required
+                    className="ui-control w-full text-xs font-mono disabled:opacity-50"
+                  >
+                    {isVersionsLoading && <option>加载版本中...</option>}
+                    {!isVersionsLoading && (!versions || versions.length === 0) && (
+                      <option value="">该 Agent 暂无可用的激活版本</option>
+                    )}
+                    {versions?.map((v) => (
+                      <option key={v.id} value={v.version}>
+                        {v.version} (env: {v.environment || "default"})
+                      </option>
+                    ))}
+                  </select>
                 )}
-                {versions?.map((v) => (
-                  <option key={v.id} value={v.version}>
-                    {v.version} (env: {v.environment || "default"})
-                  </option>
-                ))}
-              </select>
+              </Field>
               {versions && versions.length === 0 && (
                 <p className="text-micro text-fail mt-1">
                   当前 Agent 没有处于 ACTIVE 状态的版本。请先去 Agent 详情页创建新版本。
@@ -340,23 +363,26 @@ export const CreateLaunch: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                数据集名称 (Dataset Name) <span className="text-fail">*</span>
-              </label>
-              <input
-                type="text"
-                value={datasetName}
-                onChange={(e) => setDatasetName(e.target.value)}
-                required
-                placeholder="calc-agent-eval"
-                className="ui-control w-full text-xs font-mono"
-              />
+              <Field label="数据集名称 (Dataset Name)" required>
+                {({ id }) => (
+                  <input
+                    id={id}
+                    type="text"
+                    value={datasetName}
+                    onChange={(e) => setDatasetName(e.target.value)}
+                    required
+                    placeholder="calc-agent-eval"
+                    className="ui-control w-full text-xs font-mono"
+                  />
+                )}
+              </Field>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                数据集版本模式 (Dataset Version) <span className="text-fail">*</span>
-              </label>
+              <fieldset>
+                <legend className="text-xs font-semibold text-foreground-secondary mb-1.5">
+                  数据集版本模式 (Dataset Version) <span className="text-fail">*</span>
+                </legend>
               <div className="flex items-center gap-4 py-1 text-xs">
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
@@ -381,6 +407,7 @@ export const CreateLaunch: React.FC = () => {
                   <span>指定快照时间戳</span>
                 </label>
               </div>
+              </fieldset>
 
               {datasetVersionMode === "custom" && (
                 <input
@@ -513,20 +540,23 @@ export const CreateLaunch: React.FC = () => {
           </div>
 
           <div className="max-w-xs">
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-              最大并发执行数 (Concurrency)
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={concurrency}
-              onChange={(e) => setConcurrency(Math.max(1, parseInt(e.target.value) || 1))}
-              className="ui-control w-full text-xs"
-            />
-            <p className="text-micro text-muted-foreground mt-1">
-              受 AgentVersion 配置的最大并发数限制，推荐 1~3。
-            </p>
+            <Field
+              label="最大并发执行数 (Concurrency)"
+              hint="受 AgentVersion 配置的最大并发数限制，推荐 1~3。"
+            >
+              {({ id, ...aria }) => (
+                <input
+                  {...aria}
+                  id={id}
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={concurrency}
+                  onChange={(e) => setConcurrency(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="ui-control w-full text-xs"
+                />
+              )}
+            </Field>
           </div>
         </div>
 

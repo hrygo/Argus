@@ -4,6 +4,7 @@ import { AlertCircle, AlertTriangle, Trash2, X } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError, getApiErrorCode } from "../../api/errors";
+import { Field, IconButton, TextInput } from "../../components/ui/Primitives";
 
 export interface DeleteAgentModalProps {
   isOpen: boolean;
@@ -317,13 +318,13 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
               <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {agent.id}</p>
             </div>
           </div>
-          <button
+          <IconButton
+            label="关闭"
             onClick={onClose}
             disabled={mutation.isPending}
-            className="p-1.5 text-muted-foreground hover:text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50"
           >
-            <X className="w-4 h-4" />
-          </button>
+            <X aria-hidden="true" className="w-4 h-4" />
+          </IconButton>
         </div>
 
         {/* Form Body */}
@@ -378,18 +379,27 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                  请输入 Agent 全称 <span className="text-fail font-bold select-all">"{agent.name}"</span> 以确认：
-                </label>
-                <input
-                  type="text"
-                  autoFocus
-                  disabled={hasActiveLaunches || mutation.isPending}
-                  value={confirmName}
-                  onChange={(e) => setConfirmName(e.target.value)}
-                  placeholder={`请输入 ${agent.name}`}
-                  className="ui-control w-full text-sm font-medium disabled:opacity-50"
-                />
+                <Field
+                  label={
+                    <>
+                      请输入 Agent 全称{" "}
+                      <span className="text-fail font-bold select-all">"{agent.name}"</span> 以确认：
+                    </>
+                  }
+                >
+                  {({ id }) => (
+                    <TextInput
+                      id={id}
+                      type="text"
+                      autoFocus
+                      disabled={hasActiveLaunches || mutation.isPending}
+                      value={confirmName}
+                      onChange={(e) => setConfirmName(e.target.value)}
+                      placeholder={`请输入 ${agent.name}`}
+                      className="w-full text-sm font-medium disabled:opacity-50"
+                    />
+                  )}
+                </Field>
               </div>
             </div>
           ) : (
