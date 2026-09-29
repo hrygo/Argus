@@ -60,7 +60,6 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
       title="用例执行调用历史 (Attempts Timeline)"
       subtitle={`Case ID: ${caseId || itemExecutionId}`}
       icon={<Layers aria-hidden="true" className="w-4 h-4 text-primary" />}
-      className="max-w-col-table-xl"
     >
       <div className="p-6 space-y-6">
           {isLoading && <LoadingState message="正在加载 Attempt 历史调用记录..." />}

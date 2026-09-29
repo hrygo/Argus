@@ -295,7 +295,6 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
       }
       // A deletion already in flight must not be abandoned by a stray click.
       dismissable={!mutation.isPending}
-      className="sm:max-w-col-table-lg"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose} className="text-xs">

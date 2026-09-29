@@ -169,7 +169,7 @@ const Overlay: React.FC<ShellProps> = ({
           "relative flex flex-col border border-border bg-surface shadow-2xl",
           isDrawer
             ? "h-full w-full max-w-drawer border-y-0 border-r-0"
-            : "my-auto max-h-full w-full sm:max-w-col-table-lg",
+            : "my-auto max-h-full w-full sm:max-w-modal",
           className,
         )}
       >

@@ -104,7 +104,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
       icon={<Layers aria-hidden="true" className="w-5 h-5 text-primary" />}
       // A half-written version snapshot must not be abandoned mid-flight.
       dismissable={!mutation.isPending}
-      className="sm:max-w-table-xl"
+      className="sm:max-w-modal-lg"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose}>

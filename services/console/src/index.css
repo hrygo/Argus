@@ -109,6 +109,9 @@
   /* Container Scale */
   --container-sidebar: 208px;
   --container-content: 1600px;
+  --container-modal: 560px;
+  --container-modal-lg: 720px;
+  --container-drawer: 480px;
   --container-col-3xs: 84px;
   --container-col-2xs: 118px;
   --container-col-xs: 136px;

@@ -818,7 +818,6 @@ export const LaunchDetail: React.FC = () => {
         tone="danger"
         // A retry already submitted must not be abandoned by a stray click.
         dismissable={!retryFailedMutation.isPending}
-        className="sm:max-w-col-lg"
         footer={
           <>
             <Button

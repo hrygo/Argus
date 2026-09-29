@@ -31,9 +31,15 @@ export const layoutDimensions = {
   controlHeightSm: "32px",
   controlHeightMd: "36px",
   modalMaxWidth: "560px",
+  /**
+   * Dialogs that host a form rather than a confirmation. The default 560px
+   * fits a message and a pair of buttons; a form dialog needs room for a
+   * four-across row of numeric fields without stretching a two-digit input to
+   * 280px.
+   */
+  modalMaxWidthLg: "720px",
   drawerWidth: "480px",
   overlayPanelMaxHeight: "85vh",
-  codePanelMaxHeight: "80vh",
 } as const;
 
 /**
