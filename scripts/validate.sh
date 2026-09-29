@@ -49,6 +49,8 @@ if command -v pnpm >/dev/null 2>&1; then
   echo "Checking Console OpenAPI TypeScript contract sync..."
   pnpm --dir services/console api:generate
   git diff --exit-code services/console/src/api/schema.d.ts || (echo "services/console/src/api/schema.d.ts is out of date; run 'pnpm --dir services/console api:generate'" >&2 && exit 1)
+  echo "Running Console design token lint..."
+  pnpm --dir services/console lint:tokens
   echo "Running Console typecheck..."
   pnpm --dir services/console typecheck
   echo "Running Console unit tests..."

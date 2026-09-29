@@ -194,6 +194,9 @@ jobs:
           pnpm --dir services/console api:generate
           git diff --exit-code services/console/src/api/schema.d.ts || (echo "Console OpenAPI TypeScript contract out of sync" >&2 && exit 1)
 
+      - name: Console Design Token Lint
+        run: pnpm --dir services/console lint:tokens
+
       - name: Console Typecheck
         run: pnpm --dir services/console typecheck
 

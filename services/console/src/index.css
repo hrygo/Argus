@@ -1,20 +1,38 @@
 @import "tailwindcss";
+@import "./design-system/tokens.css";
 
 @theme {
-  --color-canvas: #f6f7f9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f3f4f6;
-  --color-foreground: #171923;
-  --color-foreground-secondary: #4b5563;
-  --color-muted-foreground: #686d78;
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
-  --color-primary: #5957c8;
-  --color-primary-hover: #4947b7;
-  --color-primary-strong: #403e9f;
-  --color-primary-subtle: #f1f0ff;
-  --color-primary-border: #d9d7ff;
-  --color-focus: #5a58ce;
+  --color-canvas: var(--argus-color-canvas);
+  --color-surface: var(--argus-color-surface);
+  --color-surface-muted: var(--argus-color-surface-muted);
+  --color-surface-raised: var(--argus-color-surface-raised);
+  --color-foreground: var(--argus-color-foreground);
+  --color-foreground-secondary: var(--argus-color-foreground-secondary);
+  --color-muted-foreground: var(--argus-color-muted-foreground);
+  --color-foreground-inverse: var(--argus-color-foreground-inverse);
+  --color-border: var(--argus-color-border);
+  --color-border-strong: var(--argus-color-border-strong);
+  --color-border-subtle: var(--argus-color-border-subtle);
+  --color-primary: var(--argus-color-primary);
+  --color-primary-hover: var(--argus-color-primary-hover);
+  --color-primary-strong: var(--argus-color-primary-strong);
+  --color-primary-subtle: var(--argus-color-primary-subtle);
+  --color-primary-border: var(--argus-color-primary-border);
+  --color-focus: var(--argus-color-focus);
+
+  /* Status & Gate Semantics */
+  --color-status-pass: var(--argus-color-status-pass);
+  --color-status-pass-subtle: var(--argus-color-status-pass-subtle);
+  --color-status-pass-border: var(--argus-color-status-pass-border);
+  --color-status-fail: var(--argus-color-status-fail);
+  --color-status-fail-subtle: var(--argus-color-status-fail-subtle);
+  --color-status-fail-border: var(--argus-color-status-fail-border);
+  --color-status-warn: var(--argus-color-status-warn);
+  --color-status-warn-subtle: var(--argus-color-status-warn-subtle);
+  --color-status-warn-border: var(--argus-color-status-warn-border);
+  --color-status-info: var(--argus-color-status-info);
+  --color-status-info-subtle: var(--argus-color-status-info-subtle);
+  --color-status-info-border: var(--argus-color-status-info-border);
 }
 
 @layer base {
@@ -63,11 +81,11 @@
   }
 
   .ui-button--danger {
-    @apply border border-rose-200 bg-surface text-rose-700 hover:bg-rose-50;
+    @apply border border-status-fail-border bg-surface text-status-fail hover:bg-status-fail-subtle;
   }
 
   .ui-button--warning {
-    @apply border border-amber-200 bg-surface text-amber-800 hover:bg-amber-50;
+    @apply border border-status-warn-border bg-surface text-status-warn hover:bg-status-warn-subtle;
   }
 
   .ui-button--quiet {
@@ -111,19 +129,19 @@
   }
 
   .ui-badge--info {
-    @apply border-sky-200 bg-sky-50 text-sky-800;
+    @apply border-status-info-border bg-status-info-subtle text-status-info;
   }
 
   .ui-badge--success {
-    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+    @apply border-status-pass-border bg-status-pass-subtle text-status-pass;
   }
 
   .ui-badge--warning {
-    @apply border-amber-200 bg-amber-50 text-amber-800;
+    @apply border-status-warn-border bg-status-warn-subtle text-status-warn;
   }
 
   .ui-badge--danger {
-    @apply border-rose-200 bg-rose-50 text-rose-800;
+    @apply border-status-fail-border bg-status-fail-subtle text-status-fail;
   }
 
   .ui-table-shell {

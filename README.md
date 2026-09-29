@@ -4,6 +4,9 @@
 >
 > 将 Agent 评测从“每个应用仓库里的测试脚本”升级为统一、可复现、可治理的平台能力。
 
+[![CI](https://github.com/miniceM/Argus/actions/workflows/ci.yml/badge.svg)](https://github.com/miniceM/Argus/actions/workflows/ci.yml)
+[![Langfuse i18n](https://github.com/miniceM/Argus/actions/workflows/langfuse-i18n.yml/badge.svg)](https://github.com/miniceM/Argus/actions/workflows/langfuse-i18n.yml)
+
 Argus 面向企业内部多团队、多语言、多 Agent Framework 的统一评测场景。项目基于 Langfuse 已有的 Dataset、Trace、Observation、Experiment 和 Score 能力，补齐 **Agent Registry、版本化评测、远程执行、企业治理与 Release Gate** 等执行控制面能力。
 
 Argus 的核心边界是：
@@ -122,7 +125,7 @@ Dataset 到 Agent 请求体的转换由 AgentVersion 中的 Request Mapping 定�
 
 ## 3. 当前已实现能力
 
-截至当前 `main`，Argus 已具备 Platform MVP 的第一阶段核心能力：
+截至当前 `main`，Argus 已具备 Platform MVP（v0.2）的核心能力，覆盖从 Agent 注册、版本化 Launch、异步执行到 Baseline 对比的完整链路：
 
 ### Agent Registry
 
@@ -156,13 +159,33 @@ Dataset 到 Agent 请求体的转换由 AgentVersion 中的 Request Mapping 定�
 - deterministic item-level Evaluator；
 - Langfuse Experiment / Trace / Observation / Score 集成。
 
+### 异步执行与生命周期
+
+- Redis Streams 队列 + 进程内 Worker 的异步执行模型；
+- 可靠执行状态机与 Attempt 记录，Retry 不产生重复的逻辑样本；
+- `cancel` / `resume` / `retry-failed` 生命周期操作；
+- 分布式 Agent 限流；生产模式缺少 `ARGUS_REDIS_URL` 时 fail closed。
+
+### Baseline 与版本化对比
+
+- 完成结果可绑定为当前 Agent / 环境 Baseline（带 revision CAS 保护）；
+- Run-level 汇总与 Run-level Score 同步到 Langfuse；
+- Candidate 与冻结 Baseline 的整体 / 单用例对比。
+
+### Argus Console
+
+- `services/console/`：React + TypeScript 管理控制台；
+- Agent Registry、Launch 列表与详情、Evaluator 选择、Baseline 对比视图；
+- API 类型由 `docs/openapi.json` 生成，纳入同一质量门禁。
+
 ### 工程质量
 
 - Ruff 代码质量检查；
 - Python 全量测试与 branch coverage；
 - Docker / Compose 校验；
+- Console typecheck / Vitest / Playwright E2E；
+- OpenAPI 快照与 TypeScript 契约 drift check；
 - Langfuse Cloud E2E；
-- OpenAPI 快照与 drift check；
 - CI Artifact 保留失败现场和 E2E 结果。
 
 ---
@@ -175,15 +198,15 @@ Argus 正在按企业级平台路线持续演进：
 |---|---|---|
 | S1 | Agent Registry 与版本化评测领域模型 | ✅ 已完成 |
 | S1.5 | 官方 Langfuse + 独立 i18n Patch Layer | ✅ 已完成 |
-| S2 | 异步 Orchestrator、Queue / Worker、可靠执行状态机 | 🚧 Roadmap |
-| S3 | 版本化评测、Baseline Comparison、Run-level Score | 🚧 Roadmap |
+| S2 | 异步 Orchestrator、Queue / Worker、可靠执行状态机 | ✅ 已完成 |
+| S3 | 版本化评测、Baseline Comparison、Run-level Score | ✅ 已完成 |
 | S4 | Standard Agent Trajectory、Trace Assembler、深度轨迹评测 | 🚧 Roadmap |
 | S5 | Vault、RBAC、SSO、Audit、数据脱敏 | 🚧 Roadmap |
 | S6 | ReleasePolicy、Release Gate、CLI、CI/CD 集成 | 🚧 Roadmap |
 
 目标里程碑：
 
-- **v0.2 Platform MVP**：支持内部多 Agent 团队试点；
+- **v0.2 Platform MVP**：核心链路（注册 → 版本化 Launch → 异步执行 → Baseline 对比）已实现，剩余加固项见 §12；
 - **v1.0 Enterprise Agent Evaluation Platform**：形成企业统一 Agent 质量基础设施。
 
 详细计划见 [Roadmap Issue #1](https://github.com/miniceM/Argus/issues/1)。
@@ -282,28 +305,54 @@ ExperimentLaunch
 
 ### 环境要求
 
-- Docker Engine / Docker Desktop
-- Docker Compose v2
-- 建议至少 8 GB 可用内存
-- Python 3
-- `curl`
+| 依赖 | 版本 | 用途 |
+|---|---|---|
+| Docker Engine / Docker Desktop + Compose v2 | 建议 ≥ 8 GB 可用内存 | 本地 Langfuse、PostgreSQL、Redis、Runner、Console |
+| Python | 3.12 | Eval Runner 与 `make validate` |
+| Node.js + pnpm | Node 22（CI 固定 pnpm 10.5.2） | Argus Console 与 `make validate` 的 Console 步骤 |
+| `make`、`curl` | — | 环境编排与演示脚本 |
 
-### 本地开发与端到端演示
+> `make validate` 缺少 `pnpm` 时会直接失败，不会跳过 Console 检查；缺少 Docker 时只跳过 Compose 静态校验并显式提示 `SKIP`。
 
-仓库保留了一套自包含的本地环境，用于开发和回归验证：
+### 五分钟跑通一次完整评测
+
+仓库提供自包含的本地环境（Langfuse + Argus Runner + Console + Demo Agent），用于开发和回归验证：
 
 ```bash
-make validate
-make up
-make ps
-make demo
+git clone https://github.com/miniceM/Argus.git
+cd Argus
+
+# 可选：需要本地执行 Python 门禁时准备虚拟环境
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+
+make validate      # 8 步本地质量门禁（配置解析 → 静态检查 → 契约同步 → 测试 → Compose）
+make up            # 构建并启动全部服务
+make ps            # 查看服务状态
+make demo          # 等待就绪 → 导入 Demo Registry → 跑 v1 / v2 回归
 ```
+
+`make demo` 内部已包含 `make bootstrap`（等待 Langfuse 与 Runner 就绪并调用 `/admin/bootstrap` 导入 Demo Registry）。
 
 服务地址：
 
-- Argus Eval Runner: `http://localhost:18080`
-- FastAPI / OpenAPI Docs: `http://localhost:18080/docs`
-- Langfuse: `http://localhost:3000`
+| 服务 | 地址 |
+|---|---|
+| Argus Console | http://localhost:18083 |
+| Eval Runner API | http://localhost:18080 |
+| FastAPI / OpenAPI Docs | http://localhost:18080/docs |
+| Langfuse | http://localhost:3000 |
+| Demo Agent v1 / v2 | http://localhost:18081 / http://localhost:18082 |
+
+Langfuse 演示账号：`admin@example.com` / `Poc-Admin-2026!`（仅 PoC 环境，见 `.env.poc`）。
+
+Console 前端独立开发：
+
+```bash
+make console-dev     # Vite Dev Server
+make console-test    # Vitest
+make console-e2e     # Playwright（需先安装 chromium）
+make console-build
+```
 
 Console 侧边栏的 Langfuse Dashboard 链接使用 `ARGUS_LANGFUSE_DASHBOARD_URL`。本地 Compose 未单独配置时沿用 `NEXTAUTH_URL`；若浏览器访问地址不同，请在 `.env.poc` 中设置该变量。这个浏览器 UI 地址与 Runner 在容器网络内使用的 `LANGFUSE_BASE_URL` 可以不同。远程访问时请配置浏览器实际可达的域名或 IP，不要使用服务器侧的 `localhost`。地址中的 `/langfuse` 等路径前缀会原样保留；Langfuse 及反向代理的子路径部署仍需由部署配置支持。
 
@@ -343,27 +392,63 @@ Langfuse Web 使用独立的 `zh-CN` Patch Layer 镜像。补丁只覆盖界面�
 
 ## 8. 核心 API
 
-Argus 当前提供版本化平台 API：
+Argus 当前提供版本化平台 API（下表与 [`docs/openapi.json`](./docs/openapi.json) 保持一致）：
 
 ### Agent Registry
 
 ```text
-POST /api/v1/agents
-GET  /api/v1/agents?id=...
+GET    /api/v1/agents?id=...          # 不带 id 时返回列表
+POST   /api/v1/agents
+DELETE /api/v1/agents?id=...&force=...
+POST   /api/v1/agents/purge           # 不可逆删除，需名称确认
 
-POST /api/v1/agent-versions
-GET  /api/v1/agent-versions?agent_id=...&version=...
-POST /api/v1/agent-versions/archive
+GET    /api/v1/agent-versions
+POST   /api/v1/agent-versions
+POST   /api/v1/agent-versions/archive
+
+GET    /api/v1/evaluators
 ```
 
-### Experiment Launch
+### Experiment Launch 与执行控制
 
 ```text
+GET  /api/v1/experiment-launches
 POST /api/v1/experiment-launches
-GET  /api/v1/experiment-launches?id=...
+POST /api/v1/experiment-launches/run
+GET  /api/v1/experiment-launches/{launch_id}
 
-GET  /api/v1/experiment-launch-items?launch_id=...
-GET  /api/v1/execution-attempts?item_execution_id=...
+POST /api/v1/experiment-launches/{launch_id}/run
+POST /api/v1/experiment-launches/{launch_id}/cancel
+POST /api/v1/experiment-launches/{launch_id}/resume
+POST /api/v1/experiment-launches/{launch_id}/retry-failed
+
+GET  /api/v1/experiment-launches/{launch_id}/items
+GET  /api/v1/experiment-launch-items
+GET  /api/v1/experiment-item-executions/{item_execution_id}/attempts
+GET  /api/v1/execution-attempts
+```
+
+### 结果、Baseline 与系统
+
+```text
+GET  /api/v1/experiment-launches/{launch_id}/summary
+GET  /api/v1/experiment-launches/{launch_id}/comparison
+GET  /api/v1/experiment-launches/{launch_id}/comparison/case
+
+GET  /api/v1/agents/{agent_id}/baselines
+POST /api/v1/agents/{agent_id}/baselines
+
+GET  /api/v1/system/info
+GET  /health
+GET  /metrics
+```
+
+### 兼容 / 演示接口
+
+```text
+POST /admin/bootstrap     # 本地导入 config/agents.yaml
+GET  /agents              # 兼容旧 Registry 查询
+POST /experiments/run     # Demo 回归脚本使用；新集成请使用 /api/v1/*
 ```
 
 完整 API 合约见：
@@ -407,19 +492,19 @@ Agent v2: overall_pass = 6 / 6
 
 ```text
 Code Quality
-    +
 Full Python Tests
-    +
 Docker / Compose Validation
-    ↓
+Console Quality & E2E
+        ↓（全部通过后）
 Langfuse Cloud E2E
 ```
 
-建议 `main` Branch Protection 要求以下检查通过：
+`main` Branch Protection 要求以下 5 项全部通过：
 
 - `Code Quality`
 - `Full Python Tests`
 - `Docker / Compose Validation`
+- `Console Quality & E2E`
 - `Langfuse Cloud E2E`
 
 `.github/workflows/langfuse-i18n.yml` 只在 `deploy/langfuse/**` 或该工作流自身发生变化时执行；也可以通过 `workflow_dispatch` 手动执行。Pull Request 会验证补丁、资源、类型检查、UI 测试并构建可加载的 `linux/amd64` smoke 镜像，但不会推送 GHCR。合并到 `main` 后，工作流使用 QEMU + Buildx 发布 `linux/amd64` 与 `linux/arm64` 多架构镜像到 `ghcr.io/minicem/argus-langfuse-i18n`，并生成不可变的 `4.38.0-i18n-<git-sha>` 标签。
@@ -453,7 +538,7 @@ LANGFUSE_I18N_BUILD_ID=argus-i18n-<git-sha>
 
 ```text
 .
-├── Agents.md                     # AI / Coding Agent 工程规范
+├── AGENTS.md                     # AI / Coding Agent 工程规范
 ├── README.md
 ├── TECHNICAL_DESIGN.md           # 总体技术设计基线
 ├── docker-compose.yml            # 本地 Langfuse + Argus + Demo 环境
@@ -487,15 +572,13 @@ LANGFUSE_I18N_BUILD_ID=argus-i18n-<git-sha>
 
 ## 12. 当前边界
 
-当前 `main` 已经完成持久化 Registry 与版本化 Launch，但仍不是完整的 v1.0 企业平台。
+当前 `main` 已经完成持久化 Registry、版本化 Launch、异步执行与 Baseline 对比，但仍不是完整的 v1.0 企业平台。
 
 尚在 Roadmap 中的关键能力包括：
 
-- durable async Orchestrator / Queue / Worker；
-- Cancel / Resume / failed-only rerun；
-- Baseline vs Candidate 自动比较；
 - LLM-as-a-Judge 的完整版本治理；
 - Standard Agent Trajectory 与 Trace Assembler；
+- Worker 独立部署与扩缩容（当前 Worker 运行在 Runner 进程内）；
 - Vault / KMS / Secret Manager 正式集成；
 - SSO / RBAC / Audit；
 - Dataset 审批与数据脱敏；
@@ -515,7 +598,7 @@ LANGFUSE_I18N_BUILD_ID=argus-i18n-<git-sha>
 
 仓库内 AI Agent / Coding Agent 的开发规范见：
 
-- [Agents.md](./Agents.md)
+- [AGENTS.md](./AGENTS.md)
 
 所有重要功能开发、Bug 修复和重构应遵循：
 

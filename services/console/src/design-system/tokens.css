@@ -1,0 +1,55 @@
+/**
+ * Argus Design System - CSS Variables
+ * Generated from Design Tokens SSOT
+ */
+
+:root {
+  /* Canvas & Surfaces */
+  --argus-color-canvas: #f6f7f9;
+  --argus-color-surface: #ffffff;
+  --argus-color-surface-muted: #f3f4f6;
+  --argus-color-surface-raised: #ffffff;
+
+  /* Foregrounds */
+  --argus-color-foreground: #171923;
+  --argus-color-foreground-secondary: #4b5563;
+  --argus-color-muted-foreground: #686d78;
+  --argus-color-foreground-inverse: #ffffff;
+
+  /* Borders */
+  --argus-color-border: #e5e7eb;
+  --argus-color-border-strong: #d1d5db;
+  --argus-color-border-subtle: #f3f4f6;
+
+  /* Brand Primary */
+  --argus-color-primary: #5957c8;
+  --argus-color-primary-hover: #4947b7;
+  --argus-color-primary-strong: #403e9f;
+  --argus-color-primary-subtle: #f1f0ff;
+  --argus-color-primary-border: #d9d7ff;
+  --argus-color-focus: #5957c8;
+
+  /* Status & Gate (Passed / Success) */
+  --argus-color-status-pass: #059669;
+  --argus-color-status-pass-subtle: #ecfdf5;
+  --argus-color-status-pass-border: #a7f3d0;
+
+  /* Status & Gate (Failed / Danger) */
+  --argus-color-status-fail: #e11d48;
+  --argus-color-status-fail-subtle: #fff1f2;
+  --argus-color-status-fail-border: #fecdd3;
+
+  /* Status & Gate (Warning / Degraded) */
+  --argus-color-status-warn: #d97706;
+  --argus-color-status-warn-subtle: #fffbeb;
+  --argus-color-status-warn-border: #fde68a;
+
+  /* Status & Gate (Info / Running) */
+  --argus-color-status-info: #0284c7;
+  --argus-color-status-info-subtle: #f0f9ff;
+  --argus-color-status-info-border: #bae6fd;
+
+  /* Layout Dimensions */
+  --argus-sidebar-width: 208px;
+  --argus-header-height: 56px;
+}
