@@ -4,7 +4,7 @@ import { AlertCircle, Clock, Layers, Network } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { EmptyState, ErrorState, LoadingState } from "../../components/StateViews";
 import { SideDrawer } from "../../components/ui/Overlay";
 
 type ExecutionAttempt = import("../../api/schema").components["schemas"]["ExecutionAttemptResponse"];
@@ -66,9 +66,10 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
           {error && <ErrorState message={formatApiError(error)} />}
 
           {!isLoading && !error && attempts && attempts.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground text-xs">
-              该用例暂无记录的调用 Attempt。
-            </div>
+            <EmptyState
+              title="暂无记录的调用 Attempt"
+              description="该用例尚未产生任何调用记录。若它本应被执行，请检查 Launch 的运行状态与执行策略。"
+            />
           )}
 
           {!isLoading && !error && attempts && attempts.length > 0 && (
