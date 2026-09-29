@@ -166,7 +166,7 @@
   }
 
   .ui-button--primary {
-    @apply bg-primary text-white hover:bg-primary-hover;
+    @apply bg-primary text-foreground-inverse hover:bg-primary-hover;
   }
 
   .ui-button--secondary {

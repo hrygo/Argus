@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src");
 
@@ -27,10 +27,44 @@ const RAW_PALETTE = new RegExp(
   "g",
 );
 
+// Tailwind's `white` and `black` are palette entries too, and they are the
+// easiest way to bypass a token system: there is no number to grep for, so
+// `RAW_PALETTE` never sees them. The design system expresses both ends of the
+// value range as `foreground-inverse` / a status token, so treat a literal
+// `-white` / `-black` in a colour position the same as `bg-rose-500`.
+const RAW_BLACK_WHITE = new RegExp(
+  "(?:[a-z-]+:)*?" + PALETTE_PREFIX + "(?:white|black)\\b",
+  "g",
+);
+
 // Any remaining Tailwind arbitrary value, e.g. `w-[145px]` or `has-[:checked]`.
 // Structural uses (selectors, variant arguments) are legitimate but must be
 // declared explicitly with IGNORE_MARKER on the line or the line above.
 const ARBITRARY_VALUE = /(?:^|[\s"'`:])((?:[\w.-]+:)*[\w./&*()-]+-\[[^\]\s]+\])/g;
+
+/**
+ * Every rule the linter enforces, as [rule name, match] pairs found in one
+ * line. Exported so the rules themselves can be tested: a regex that silently
+ * stops matching is the one failure mode a passing linter cannot report.
+ *
+ * @param {string} line
+ * @returns {{ rule: string, match: string }[]}
+ */
+export function scanLine(line) {
+  const found = [];
+  const collect = (rule, pattern, group = 0) => {
+    for (const m of line.matchAll(pattern)) {
+      found.push({ rule, match: m[group] });
+    }
+  };
+
+  collect("hardcoded hex color", HEX_COLOR);
+  collect("raw palette utility", RAW_PALETTE);
+  collect("raw palette utility", RAW_BLACK_WHITE);
+  collect("arbitrary value", ARBITRARY_VALUE, 1);
+
+  return found;
+}
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir)) {
@@ -44,51 +78,56 @@ function walk(dir, out = []) {
   return out;
 }
 
-const violations = [];
+function main() {
+  const violations = [];
 
-for (const file of walk(SRC)) {
-  if (ALLOWED_RAW_VALUE_FILES.has(file)) continue;
+  for (const file of walk(SRC)) {
+    if (ALLOWED_RAW_VALUE_FILES.has(file)) continue;
 
-  const lines = fs.readFileSync(file, "utf8").split("\n");
-  const rel = path.relative(SRC, file);
+    const lines = fs.readFileSync(file, "utf8").split("\n");
+    const rel = path.relative(SRC, file);
 
-  lines.forEach((line, index) => {
-    const prev = index > 0 ? lines[index - 1] : "";
-    if (line.includes(IGNORE_MARKER) || prev.includes(IGNORE_MARKER)) return;
+    lines.forEach((line, index) => {
+      const prev = index > 0 ? lines[index - 1] : "";
+      if (line.includes(IGNORE_MARKER) || prev.includes(IGNORE_MARKER)) return;
 
-    const report = (rule, match) => {
-      violations.push({ rel, line: index + 1, rule, match, text: line.trim() });
-    };
-
-    for (const m of line.matchAll(HEX_COLOR)) report("hardcoded hex color", m[0]);
-    for (const m of line.matchAll(RAW_PALETTE)) report("raw palette utility", m[0]);
-    for (const m of line.matchAll(ARBITRARY_VALUE)) report("arbitrary value", m[1]);
-  });
-}
-
-if (violations.length > 0) {
-  const byRule = violations.reduce(
-    (acc, v) => ((acc[v.rule] = (acc[v.rule] ?? 0) + 1), acc),
-    {},
-  );
-  console.error("Design Token Lint failed:\n");
-  for (const v of violations) {
-    console.error(`  ${v.rel}:${v.line}  [${v.rule}] ${v.match}`);
-    console.error(`    ${v.text}`);
+      for (const { rule, match } of scanLine(line)) {
+        violations.push({ rel, line: index + 1, rule, match, text: line.trim() });
+      }
+    });
   }
-  const summary = Object.entries(byRule)
-    .map(([rule, n]) => `${rule} x${n}`)
-    .join(", ");
-  console.error(`\n${violations.length} violation(s): ${summary}`);
-  console.error(
-    [
-      "",
-      "Use semantic tokens from src/design-system/tokens/.",
-      "If a raw value is genuinely unavoidable (structural selector, intrinsic grid),",
-      `add an explicit \`// ${IGNORE_MARKER}: <reason>\` comment on the line or the line above.`,
-    ].join("\n"),
-  );
-  process.exit(1);
+
+  if (violations.length > 0) {
+    const byRule = violations.reduce(
+      (acc, v) => ((acc[v.rule] = (acc[v.rule] ?? 0) + 1), acc),
+      {},
+    );
+    console.error("Design Token Lint failed:\n");
+    for (const v of violations) {
+      console.error(`  ${v.rel}:${v.line}  [${v.rule}] ${v.match}`);
+      console.error(`    ${v.text}`);
+    }
+    const summary = Object.entries(byRule)
+      .map(([rule, n]) => `${rule} x${n}`)
+      .join(", ");
+    console.error(`\n${violations.length} violation(s): ${summary}`);
+    console.error(
+      [
+        "",
+        "Use semantic tokens from src/design-system/tokens/.",
+        "If a raw value is genuinely unavoidable (structural selector, intrinsic grid),",
+        `add an explicit \`// ${IGNORE_MARKER}: <reason>\` comment on the line or the line above.`,
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+
+  console.log("Design Token Lint: all files use semantic tokens.");
 }
 
-console.log("Design Token Lint: all files use semantic tokens.");
+// Only lint when invoked as a script. The test file imports `scanLine`, and
+// running the walk on import would make the linter report (and exit) from
+// inside a test run.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

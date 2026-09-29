@@ -52,7 +52,7 @@ export const router = createBrowserRouter([
             <p className="text-xs text-foreground-secondary">请求的页面不存在或已被移除。</p>
             <a
               href="/launches"
-              className="inline-block px-4 py-2 text-xs font-semibold text-white bg-queued-solid rounded-lg hover:bg-queued-solid-hover"
+              className="inline-block px-4 py-2 text-xs font-semibold text-foreground-inverse bg-primary rounded-lg hover:bg-primary-hover"
             >
               返回评测列表
             </a>
