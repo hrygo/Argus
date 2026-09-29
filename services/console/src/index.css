@@ -130,6 +130,14 @@
   --shadow-sm: var(--argus-shadow-sm);
   --shadow-md: var(--argus-shadow-md);
   --shadow-lg: var(--argus-shadow-lg);
+
+  /* Radius Scale — mirrors design-system/tokens/elevation.ts */
+  --radius-xs: var(--argus-radius-xs);
+  --radius-sm: var(--argus-radius-sm);
+  --radius-md: var(--argus-radius-md);
+  --radius-lg: var(--argus-radius-lg);
+  --radius-xl: var(--argus-radius-xl);
+  --radius-full: var(--argus-radius-full);
 }
 
 @layer base {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { shadows } from "../tokens/elevation";
+import { radii, shadows } from "../tokens/elevation";
 
 // Vitest runs with the console package as its root, so this sits at a stable
 // path relative to cwd. `import.meta.url` is not a file:// URL here.
@@ -46,6 +46,29 @@ for (const file of walk(SRC)) {
     const step = match[1];
     const rel = path.relative(SRC, file);
     usedShadows.set(step, [...(usedShadows.get(step) ?? []), rel]);
+  }
+}
+
+const radiusTokenValues = new Map(
+  [...tokensCss.matchAll(/--argus-radius-([a-z0-9]+):\s*([^;]+);/g)].map((m) => [
+    m[1],
+    m[2].trim(),
+  ]),
+);
+
+const radiusThemeBindings = new Set(
+  [...indexCss.matchAll(/--radius-([a-z0-9]+):\s*var\(--argus-radius-[a-z0-9]+\);/g)].map(
+    (m) => m[1],
+  ),
+);
+
+const usedRadii = new Map<string, string[]>();
+for (const file of walk(SRC)) {
+  const text = readFileSync(file, "utf8");
+  for (const match of text.matchAll(/(?<![\w-])rounded-([a-z0-9]+)/g)) {
+    const step = match[1];
+    const rel = path.relative(SRC, file);
+    usedRadii.set(step, [...(usedRadii.get(step) ?? []), rel]);
   }
 }
 
@@ -110,6 +133,57 @@ describe("elevation scale", () => {
     expect(
       orphans,
       `index.css binds shadows with no token behind them: ${orphans.join(", ")}`,
+    ).toEqual([]);
+  });
+});
+
+describe("radius scale", () => {
+  it.each([...Object.entries(radii)])(
+    "binds --radius-%s to its token",
+    (step) => {
+      // `none` and `full` are Tailwind defaults that need no binding to
+      // resolve; every named step has to come from the token.
+      if (step === "none") return;
+      expect(
+        radiusThemeBindings.has(step) || step === "full",
+        `--radius-${step} is defined in elevation.ts but never bound in ` +
+          `index.css, so \`rounded-${step}\` resolves to Tailwind's default ` +
+          `rather than the Argus scale.`,
+      ).toBe(true);
+    },
+  );
+
+  it.each([...usedRadii.entries()])(
+    "rounded-%s is a step the Argus scale defines",
+    (step, files) => {
+      // `radii.xl` is documented as the dialog radius. `rounded-2xl` is a
+      // Tailwind step the Argus scale has no opinion about, which is how a
+      // sheet ends up with a radius nobody chose.
+      expect(
+        Object.keys(radii),
+        `rounded-${step} is used in ${[...new Set(files)].join(", ")} but ` +
+          `is not a step of the Argus radius scale.`,
+      ).toContain(step);
+    },
+  );
+
+  it("carries the token value for every declared step", () => {
+    for (const [step, value] of radiusTokenValues) {
+      expect(
+        (radii as Record<string, string>)[step],
+        `tokens.css --argus-radius-${step} should carry the value from ` +
+          `elevation.radii.${step}`,
+      ).toBe(value);
+    }
+  });
+
+  it("declares no radius variable in tokens.css that no token owns", () => {
+    const orphans = [...radiusTokenValues.keys()].filter(
+      (step) => !(step in radii),
+    );
+    expect(
+      orphans,
+      `tokens.css declares radii with no token behind them: ${orphans.join(", ")}`,
     ).toEqual([]);
   });
 });
