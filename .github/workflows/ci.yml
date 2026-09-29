@@ -19,9 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -94,9 +96,11 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -125,7 +129,7 @@ jobs:
 
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-test-reports
           path: artifacts/
@@ -137,7 +141,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Validate self-hosted Compose
         run: docker compose --env-file .env.poc -f docker-compose.yml config -q
@@ -148,31 +156,59 @@ jobs:
           docker compose --env-file .env.cloud -f docker-compose.cloud.yml config -q
 
       - name: Build application images
-        run: |
-          docker build -t argus-demo-agent:ci services/demo-agent
-          docker build \
-            --build-arg ARGUS_BUILD_ID="${GITHUB_SHA}" \
-            --build-arg RUNNER_VERSION=0.1.0 \
-            -t argus-eval-runner:ci services/eval-runner
-          docker build -t argus-console:ci services/console
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/demo-agent
+          load: true
+          push: false
+          tags: argus-demo-agent:ci
+          cache-from: type=gha,scope=demo-agent
+          cache-to: type=gha,mode=max,scope=demo-agent
+
+      - name: Build eval-runner image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/eval-runner
+          load: true
+          push: false
+          tags: argus-eval-runner:ci
+          build-args: |
+            ARGUS_BUILD_ID=${{ github.sha }}
+            RUNNER_VERSION=0.1.0
+          cache-from: type=gha,scope=eval-runner
+          cache-to: type=gha,mode=max,scope=eval-runner
+
+      - name: Build console image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/console
+          load: true
+          push: false
+          tags: argus-console:ci
+          cache-from: type=gha,scope=console
+          cache-to: type=gha,mode=max,scope=console
 
   console:
     name: Console Quality & E2E
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 10.5.2
           run_install: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: services/console/pnpm-lock.yaml
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -231,7 +267,9 @@ jobs:
       LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Validate Langfuse Cloud secrets
         shell: bash
@@ -258,7 +296,7 @@ jobs:
 
       - name: Upload E2E evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: langfuse-cloud-e2e-${{ github.run_id }}
           path: artifacts/e2e/
