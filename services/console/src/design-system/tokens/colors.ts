@@ -52,6 +52,7 @@ export const globalColors = {
     600: "#e11d48",
     700: "#be123c",
     800: "#9f1239",
+    900: "#881337",
   },
   // Status / Gate: Warning (Degraded, Warning, Retry In Progress)
   amber: {
@@ -106,7 +107,9 @@ export const semanticColors = {
 
   // Borders & Dividers
   border: "#e5e7eb",
-  borderStrong: "#d1d5db",
+  // SC 1.4.11: control boundaries must reach 3:1 against every surface they
+  // can appear on. The previous #d1d5db managed only 1.47:1 on white.
+  borderStrong: "#868d99",
   borderSubtle: "#f3f4f6",
 
   // Brand Primary Interaction
@@ -153,8 +156,8 @@ export const statusScale = {
     border: globalColors.sky[200],
     text: globalColors.sky[700],
     textStrong: globalColors.sky[800],
-    solid: globalColors.sky[400],
-    solidHover: globalColors.sky[600],
+    solid: globalColors.sky[700],
+    solidHover: globalColors.sky[800],
     onSolid: "#ffffff",
   },
   pass: {
@@ -162,16 +165,16 @@ export const statusScale = {
     border: globalColors.emerald[200],
     text: globalColors.emerald[700],
     textStrong: globalColors.emerald[800],
-    solid: globalColors.emerald[500],
-    solidHover: globalColors.emerald[600],
+    solid: globalColors.emerald[700],
+    solidHover: globalColors.emerald[800],
     onSolid: "#ffffff",
   },
   fail: {
     subtle: globalColors.rose[50],
     border: globalColors.rose[200],
     text: globalColors.rose[700],
-    textStrong: globalColors.rose[800],
-    solid: globalColors.rose[500],
+    textStrong: globalColors.rose[900],
+    solid: globalColors.rose[600],
     solidHover: globalColors.rose[700],
     onSolid: "#ffffff",
   },
@@ -180,26 +183,26 @@ export const statusScale = {
     border: globalColors.amber[200],
     text: globalColors.amber[700],
     textStrong: globalColors.amber[800],
-    solid: globalColors.amber[400],
-    solidHover: globalColors.amber[600],
-    onSolid: globalColors.amber[900],
+    solid: globalColors.amber[700],
+    solidHover: globalColors.amber[800],
+    onSolid: "#ffffff",
   },
   retry: {
     subtle: globalColors.yellow[50],
     border: globalColors.yellow[200],
     text: globalColors.yellow[700],
     textStrong: globalColors.yellow[800],
-    solid: globalColors.yellow[400],
-    solidHover: globalColors.yellow[600],
-    onSolid: globalColors.yellow[900],
+    solid: globalColors.yellow[700],
+    solidHover: globalColors.yellow[800],
+    onSolid: "#ffffff",
   },
   cancelled: {
-    subtle: semanticColors.surfaceMuted,
-    border: semanticColors.border,
+    subtle: globalColors.slate[100],
+    border: globalColors.slate[200],
     text: globalColors.slate[700],
     textStrong: globalColors.slate[900],
-    solid: globalColors.slate[400],
-    solidHover: globalColors.slate[500],
+    solid: globalColors.slate[500],
+    solidHover: globalColors.slate[600],
     onSolid: "#ffffff",
   },
 } as const;

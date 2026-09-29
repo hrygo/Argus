@@ -9,6 +9,7 @@
   --argus-color-surface: #ffffff;
   --argus-color-surface-muted: #f3f4f6;
   --argus-color-surface-raised: #ffffff;
+  --argus-color-surface-overlay: #ffffff;
 
   /* Foregrounds */
   --argus-color-foreground: #171923;
@@ -18,7 +19,7 @@
 
   /* Borders */
   --argus-color-border: #e5e7eb;
-  --argus-color-border-strong: #d1d5db;
+  --argus-color-border-strong: #868d99;
   --argus-color-border-subtle: #f3f4f6;
 
   /* Brand Primary */
@@ -60,8 +61,8 @@
   --argus-color-running-border: #bae6fd;
   --argus-color-running: #0369a1;
   --argus-color-running-strong: #075985;
-  --argus-color-running-solid: #38bdf8;
-  --argus-color-running-solid-hover: #0284c7;
+  --argus-color-running-solid: #0369a1;
+  --argus-color-running-solid-hover: #075985;
   --argus-color-running-on-solid: #ffffff;
 
   /* Status Scale — pass */
@@ -69,16 +70,16 @@
   --argus-color-pass-border: #a7f3d0;
   --argus-color-pass: #047857;
   --argus-color-pass-strong: #065f46;
-  --argus-color-pass-solid: #10b981;
-  --argus-color-pass-solid-hover: #059669;
+  --argus-color-pass-solid: #047857;
+  --argus-color-pass-solid-hover: #065f46;
   --argus-color-pass-on-solid: #ffffff;
 
   /* Status Scale — fail */
   --argus-color-fail-subtle: #fff1f2;
   --argus-color-fail-border: #fecdd3;
   --argus-color-fail: #be123c;
-  --argus-color-fail-strong: #9f1239;
-  --argus-color-fail-solid: #f43f5e;
+  --argus-color-fail-strong: #881337;
+  --argus-color-fail-solid: #e11d48;
   --argus-color-fail-solid-hover: #be123c;
   --argus-color-fail-on-solid: #ffffff;
 
@@ -87,25 +88,25 @@
   --argus-color-timeout-border: #fde68a;
   --argus-color-timeout: #b45309;
   --argus-color-timeout-strong: #92400e;
-  --argus-color-timeout-solid: #fbbf24;
-  --argus-color-timeout-solid-hover: #d97706;
-  --argus-color-timeout-on-solid: #78350f;
+  --argus-color-timeout-solid: #b45309;
+  --argus-color-timeout-solid-hover: #92400e;
+  --argus-color-timeout-on-solid: #ffffff;
 
   /* Status Scale — retry */
   --argus-color-retry-subtle: #fefce8;
   --argus-color-retry-border: #fef08a;
   --argus-color-retry: #a16207;
   --argus-color-retry-strong: #854d0e;
-  --argus-color-retry-solid: #facc15;
-  --argus-color-retry-solid-hover: #ca8a04;
-  --argus-color-retry-on-solid: #713f12;
+  --argus-color-retry-solid: #a16207;
+  --argus-color-retry-solid-hover: #854d0e;
+  --argus-color-retry-on-solid: #ffffff;
 
   /* Status Scale — cancelled */
-  --argus-color-cancelled-subtle: #f3f4f6;
-  --argus-color-cancelled-border: #e5e7eb;
+  --argus-color-cancelled-subtle: #f1f5f9;
+  --argus-color-cancelled-border: #e2e8f0;
   --argus-color-cancelled: #334155;
   --argus-color-cancelled-strong: #0f172a;
-  --argus-color-cancelled-solid: #94a3b8;
-  --argus-color-cancelled-solid-hover: #64748b;
+  --argus-color-cancelled-solid: #64748b;
+  --argus-color-cancelled-solid-hover: #475569;
   --argus-color-cancelled-on-solid: #ffffff;
 }

@@ -19,6 +19,7 @@
   --color-surface: var(--argus-color-surface);
   --color-surface-muted: var(--argus-color-surface-muted);
   --color-surface-raised: var(--argus-color-surface-raised);
+  --color-surface-overlay: var(--argus-color-surface-overlay);
   --color-foreground: var(--argus-color-foreground);
   --color-foreground-secondary: var(--argus-color-foreground-secondary);
   --color-muted-foreground: var(--argus-color-muted-foreground);
