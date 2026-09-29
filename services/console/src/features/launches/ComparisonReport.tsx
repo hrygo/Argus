@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -100,7 +100,6 @@ export const ComparisonReport: React.FC<{
   const isViewStateCurrent = viewState.launchId === launchId && viewState.snapshotId === snapshotId;
   const filter = isViewStateCurrent ? viewState.filter : "ALL";
   const selectedCase = isViewStateCurrent ? viewState.selectedCase : null;
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const canReadResults = TERMINAL.has(launchStatus) || Boolean(snapshotId);
 
   useEffect(() => {
@@ -375,8 +374,7 @@ export const ComparisonReport: React.FC<{
                         {row.baseline_trace_url && <a href={row.baseline_trace_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">Baseline Trace <ExternalLink className="h-3 w-3" /></a>}
                         {row.candidate_experiment_url && <a href={row.candidate_experiment_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">Candidate Experiment <ExternalLink className="h-3 w-3" /></a>}
                         {row.candidate_trace_url && <a href={row.candidate_trace_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">Candidate Trace <ExternalLink className="h-3 w-3" /></a>}
-                        {row.dataset_item_id && row.classification === "REGRESSION" && snapshotId && <Button variant="secondary" className="text-xs" onClick={(event) => {
-                          triggerRef.current = event.currentTarget;
+                        {row.dataset_item_id && row.classification === "REGRESSION" && snapshotId && <Button variant="secondary" className="text-xs" onClick={() => {
                           updateViewState({ selectedCase: row.dataset_item_id ?? null });
                         }}>查看双侧输出</Button>}
                       </div>
@@ -403,11 +401,7 @@ export const ComparisonReport: React.FC<{
         launchId={launchId}
         snapshotId={snapshotId}
         datasetItemId={selectedCase}
-        triggerRef={triggerRef}
-        onClose={() => {
-          updateViewState({ selectedCase: null });
-          triggerRef.current?.focus();
-        }}
+        onClose={() => updateViewState({ selectedCase: null })}
       />}
     </Panel>
   );

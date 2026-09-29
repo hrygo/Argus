@@ -2,7 +2,13 @@ import React, { forwardRef, useId } from "react";
 import clsx from "clsx";
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "warning" | "quiet";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "danger"
+  | "warning"
+  | "warning-solid"
+  | "quiet";
 
 export const buttonClassName = (variant: ButtonVariant = "secondary", className?: string) =>
   clsx("ui-button", `ui-button--${variant}`, className);

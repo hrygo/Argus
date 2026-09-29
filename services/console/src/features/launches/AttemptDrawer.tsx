@@ -1,17 +1,11 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  Clock,
-  Layers,
-  Network,
-  X,
-} from "lucide-react";
+import { AlertCircle, Clock, Layers, Network } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
 import { ErrorState, LoadingState } from "../../components/StateViews";
-import { IconButton } from "../../components/ui/Primitives";
+import { SideDrawer } from "../../components/ui/Overlay";
 
 type ExecutionAttempt = import("../../api/schema").components["schemas"]["ExecutionAttemptResponse"];
 
@@ -60,33 +54,15 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-overlay/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Slide-over panel */}
-      <div className="relative w-full max-w-xl bg-surface shadow-2xl z-10 flex flex-col h-full overflow-hidden">
-        {/* Drawer Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-canvas/75">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-primary" />
-            <div>
-              <h3 className="text-sm font-bold text-foreground">
-                用例执行调用历史 (Attempts Timeline)
-              </h3>
-              <p className="text-xs text-muted-foreground font-mono">Case ID: {caseId || itemExecutionId}</p>
-            </div>
-          </div>
-          <IconButton label="关闭 Attempt 详情" onClick={onClose}>
-            <X aria-hidden="true" className="w-5 h-5" />
-          </IconButton>
-        </div>
-
-        {/* Drawer Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <SideDrawer
+      open={isOpen}
+      onClose={onClose}
+      title="用例执行调用历史 (Attempts Timeline)"
+      subtitle={`Case ID: ${caseId || itemExecutionId}`}
+      icon={<Layers aria-hidden="true" className="w-4 h-4 text-primary" />}
+      className="max-w-col-table-xl"
+    >
+      <div className="p-6 space-y-6">
           {isLoading && <LoadingState message="正在加载 Attempt 历史调用记录..." />}
           {error && <ErrorState message={formatApiError(error)} />}
 
@@ -209,8 +185,7 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
               })}
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </SideDrawer>
   );
 };

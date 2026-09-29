@@ -28,6 +28,7 @@ import { ComparisonReport } from "./ComparisonReport";
 import { ACTIVE_LAUNCH_STATUSES, LaunchStatus } from "./LaunchesList";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Button, PageHeader, Panel, buttonClassName } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
 
 type LaunchResponse = import("../../api/schema").components["schemas"]["ExperimentLaunchResponse"];
 type ItemExecution = import("../../api/schema").components["schemas"]["ExperimentItemExecutionResponse"];
@@ -810,49 +811,57 @@ export const LaunchDetail: React.FC = () => {
       )}
 
       {/* Retry Failed Confirmation Modal */}
-      {showRetryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/40 backdrop-blur-xs p-4">
-          <div className="bg-surface rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-border">
-            <h3 className="text-base font-bold text-foreground">重试失败用例 (Retry Failed Items)</h3>
-            <p className="text-xs text-foreground-secondary leading-relaxed">
-              系统将仅针对执行失败 (<code className="text-fail font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-timeout font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
-            </p>
+      <Modal
+        open={showRetryModal}
+        onClose={() => setShowRetryModal(false)}
+        title="重试失败用例 (Retry Failed Items)"
+        tone="danger"
+        // A retry already submitted must not be abandoned by a stray click.
+        dismissable={!retryFailedMutation.isPending}
+        className="sm:max-w-col-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              onClick={() => setShowRetryModal(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="warning-solid"
+              className="text-xs"
+              disabled={retryFailedMutation.isPending}
+              onClick={() => retryFailedMutation.mutate(forceRetry)}
+            >
+              {retryFailedMutation.isPending ? "正在提交重试..." : "确认重新调度"}
+            </Button>
+          </>
+        }
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-xs text-foreground-secondary leading-relaxed">
+            系统将仅针对执行失败 (<code className="text-fail font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-timeout font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
+          </p>
 
-            <div className="p-3 bg-timeout-subtle border border-timeout-border rounded-xl space-y-2">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={forceRetry}
-                  onChange={(e) => setForceRetry(e.target.checked)}
-                  className="mt-0.5 rounded text-primary focus:ring-focus"
-                />
-                <span className="text-xs text-timeout-strong">
-                  <strong className="block font-semibold">强制重试非幂等可能已发送用例 (Force Replay)</strong>
-                  若用例在 Worker 崩溃前可能已将请求发出且接口非幂等，勾选此项以确认允许二次执行。
-                </span>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowRetryModal(false)}
-                className="px-3 py-1.5 text-xs font-semibold text-foreground-secondary hover:text-foreground cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                disabled={retryFailedMutation.isPending}
-                onClick={() => retryFailedMutation.mutate(forceRetry)}
-                className="px-4 py-2 text-xs font-semibold text-white bg-timeout-solid hover:bg-timeout-solid-hover rounded-lg shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                {retryFailedMutation.isPending ? "正在提交重试..." : "确认重新调度"}
-              </button>
-            </div>
+          <div className="p-3 bg-timeout-subtle border border-timeout-border rounded-xl">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={forceRetry}
+                onChange={(e) => setForceRetry(e.target.checked)}
+                className="mt-0.5 rounded text-primary focus:ring-focus"
+              />
+              <span className="text-xs text-timeout-strong">
+                <strong className="block font-semibold">强制重试非幂等可能已发送用例 (Force Replay)</strong>
+                若用例在 Worker 崩溃前可能已将请求发出且接口非幂等，勾选此项以确认允许二次执行。
+              </span>
+            </label>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

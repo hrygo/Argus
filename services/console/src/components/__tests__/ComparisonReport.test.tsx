@@ -265,6 +265,10 @@ describe("ComparisonReport", () => {
     fireEvent.click(screen.getByRole("button", { name: "加载更多用例（已显示 1 条）" }));
     expect(await screen.findByText("case-2")).toBeInTheDocument();
     const trigger = screen.getAllByRole("button", { name: "查看双侧输出" })[0];
+    // A real click focuses the button; fireEvent does not. Focus the trigger
+    // explicitly so the restore assertion reflects browser behaviour rather
+    // than a jsdom gap.
+    trigger.focus();
     fireEvent.click(trigger);
     const dialog = await screen.findByRole("dialog", { name: "Case 双侧结果" });
     expect(await screen.findByText("UPSTREAM_ERROR")).toBeInTheDocument();

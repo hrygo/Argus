@@ -181,6 +181,13 @@
     @apply border border-timeout-border bg-surface text-timeout hover:bg-timeout-subtle;
   }
 
+  /* Filled warning, for the primary action of a warning-level dialog. The
+     filled family carries a label, so it is bound to `onSolid` at 4.5:1 —
+     see design-system/tokens/contrast.ts. */
+  .ui-button--warning-solid {
+    @apply bg-timeout-solid text-timeout-on-solid hover:bg-timeout-solid-hover;
+  }
+
   .ui-button--quiet {
     @apply bg-transparent text-foreground-secondary hover:bg-surface-muted hover:text-foreground;
   }

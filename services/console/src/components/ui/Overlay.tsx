@@ -7,9 +7,9 @@ import { IconButton } from "./Primitives";
  * Modal / Drawer
  *
  * The console had eight hand-rolled overlays. Four declared no `role` or
- * `aria-modal`, three ignored Escape, and one used `bg-black/40` instead of
- * the `overlay` token — which is what happens when the same component is
- * written eight times.
+ * `aria-modal`, three ignored Escape, and one used a raw literal black for
+ * its backdrop instead of the `overlay` token — which is what happens when
+ * the same component is written eight times.
  *
  * Everything a dialog owes its user lives here: the ARIA role, the labelled
  * title, Escape, backdrop dismissal, a Tab trap, focus restoration and the
