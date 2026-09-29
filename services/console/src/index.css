@@ -170,6 +170,33 @@
     outline: var(--argus-focus-ring-width) solid var(--color-focus);
     outline-offset: var(--argus-focus-ring-offset);
   }
+
+  /* WCAG 2.2 SC 2.2.2 Pause, Stop, Hide.
+
+     The console animated unconditionally: a loading spinner that can run
+     indefinitely, a popover that slides up and scales in, a progress segment
+     that pulses. A user who asks the OS to reduce motion was ignored.
+
+     Durations collapse to ~0 rather than being removed, so an element that
+     animates in still ends up in its final state and stays visible. The
+     `!important` is deliberate — this has to beat utility classes, which is
+     the whole point of putting it here rather than at each call site.
+
+     Nothing is lost: every animation in the console is paired with a text
+     label (LoadingState always takes a message, the refresh buttons have
+     names, the running badge carries a count), so the status survives without
+     the movement. Asserted by e2e/a11y.spec.ts under emulated
+     `prefers-reduced-motion: reduce`. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {

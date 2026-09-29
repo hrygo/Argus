@@ -305,3 +305,58 @@ test.describe("WCAG 2.2 AA: overlay surfaces", () => {
     );
   });
 });
+
+/**
+ * WCAG 2.2 SC 2.2.2 Pause, Stop, Hide covers information that starts
+ * automatically, lasts more than five seconds and sits alongside other
+ * content. A loading spinner that can run indefinitely qualifies; so does a
+ * popover that slides and scales itself into place. `prefers-reduced-motion`
+ * is the user's request to be spared that, and the console honoured no such
+ * request anywhere before this.
+ *
+ * Disabling the motion is safe here precisely because every animation in the
+ * console is paired with a text label -- `LoadingState` always takes a
+ * message, the refresh buttons have names, the running badge carries a
+ * count -- so the status survives without the movement.
+ */
+test.describe("prefers-reduced-motion", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockApi(page);
+  });
+
+  test("the popover does not slide or scale itself in", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(`/agents/${AGENT_ID}`);
+    await page.waitForLoadState("networkidle");
+
+    // The FieldHelp triggers live inside the create-version dialog, not on the
+    // agent detail page itself.
+    await page.getByRole("button", { name: "创建新版本" }).click();
+    await page.locator("button[aria-expanded]").first().click();
+
+    const popover = page.getByRole("dialog").last();
+    await expect(popover).toBeVisible();
+
+    const motion = await popover.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        duration: cs.animationDuration,
+        transitionDuration: cs.transitionDuration,
+      };
+    });
+
+    // The entrance animation is neutralised rather than removed outright, so
+    // the popover still becomes visible -- just without the movement.
+    const instant = (value: string) =>
+      value.split(",").every((part) => parseFloat(part) <= 0.001);
+
+    expect(
+      instant(motion.duration),
+      `animation-duration ${motion.duration}`,
+    ).toBe(true);
+    expect(
+      instant(motion.transitionDuration),
+      `transition-duration ${motion.transitionDuration}`,
+    ).toBe(true);
+  });
+});
