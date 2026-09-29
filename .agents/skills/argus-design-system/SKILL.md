@@ -153,6 +153,13 @@ doing so silently rescales every existing usage.
   `containerScale.test.ts` fails the build if a width utility is used with no
   `--container-*` behind it, because such a utility emits no CSS and the
   constraint disappears without any error.
+- Depth and corners come from `elevation.ts`, and only from it:
+  `shadow-xs|sm|md|lg` and `rounded-xs|sm|md|lg|xl|full`. Do not reach for
+  `shadow-xl` or `shadow-2xl` — they are Tailwind steps the Argus scale does
+  not define, and `shadow-2xl` alone (`0 25px 50px -12px rgb(0 0 0 / 0.25)`)
+  is five times heavier than anything `elevation.ts` sanctions, which is what
+  makes an overlay read as consumer app rather than control plane.
+  `elevation.test.ts` rejects off-scale steps in both directions.
 - A state that only changes colour is not a state. Every status surface pairs
   its tint with a label or a count.
 
