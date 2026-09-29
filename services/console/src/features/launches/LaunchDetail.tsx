@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import clsx from "clsx";
 import {
   ArrowLeft,
   Bot,
@@ -88,6 +89,100 @@ interface ManifestData {
   };
   created_at?: string;
 }
+
+type ProgressCounts = {
+  total: number;
+  pending: number;
+  queued: number;
+  running: number;
+  retry_wait: number;
+  succeeded: number;
+  failed: number;
+  timed_out: number;
+  cancelled: number;
+};
+
+interface ProgressStateSpec {
+  state: string;
+  label: string;
+  /** Meter fill. */
+  fillClass: string;
+  /** Count card surface. */
+  cardClass: string;
+  labelClass: string;
+  valueClass: string;
+  count: (p: ProgressCounts) => number;
+}
+
+// One description per execution state, consumed by both the meter and the
+// count grid. Deriving both from a single list is what keeps them honest: the
+// meter previously omitted `queued`, so a launch with nothing started yet
+// rendered an empty bar beside a grid reading "queued: 6".
+const PROGRESS_STATES: ProgressStateSpec[] = [
+  {
+    state: "queued",
+    label: "排队中",
+    fillClass: "bg-queued-solid",
+    cardClass: "bg-queued-subtle border-queued-border",
+    labelClass: "text-queued",
+    valueClass: "text-queued-strong",
+    count: (p) => p.queued + p.pending,
+  },
+  {
+    state: "running",
+    label: "运行中",
+    fillClass: "bg-running-solid animate-pulse",
+    cardClass: "bg-running-subtle border-running-border",
+    labelClass: "text-running",
+    valueClass: "text-running-strong",
+    count: (p) => p.running,
+  },
+  {
+    state: "pass",
+    label: "成功",
+    fillClass: "bg-pass-solid",
+    cardClass: "bg-pass-subtle border-pass-border",
+    labelClass: "text-pass",
+    valueClass: "text-pass-strong",
+    count: (p) => p.succeeded,
+  },
+  {
+    state: "fail",
+    label: "失败",
+    fillClass: "bg-fail-solid",
+    cardClass: "bg-fail-subtle border-fail-border",
+    labelClass: "text-fail",
+    valueClass: "text-fail-strong",
+    count: (p) => p.failed,
+  },
+  {
+    state: "timeout",
+    label: "超时",
+    fillClass: "bg-timeout-solid",
+    cardClass: "bg-timeout-subtle border-timeout-border",
+    labelClass: "text-timeout",
+    valueClass: "text-timeout-strong",
+    count: (p) => p.timed_out,
+  },
+  {
+    state: "retry",
+    label: "等待重试",
+    fillClass: "bg-retry-solid",
+    cardClass: "bg-retry-subtle border-retry-border",
+    labelClass: "text-retry",
+    valueClass: "text-retry-strong",
+    count: (p) => p.retry_wait,
+  },
+  {
+    state: "cancelled",
+    label: "已取消",
+    fillClass: "bg-cancelled-solid",
+    cardClass: "bg-cancelled-subtle border-cancelled-border",
+    labelClass: "text-cancelled",
+    valueClass: "text-cancelled-strong",
+    count: (p) => p.cancelled,
+  },
+];
 
 export const LaunchDetail: React.FC = () => {
   const { launchId } = useParams<{ launchId: string }>();
@@ -287,6 +382,11 @@ export const LaunchDetail: React.FC = () => {
 
   const allowedActions = launch.allowed_actions || (launch.status === "PENDING" ? ["run"] : []);
   const progress = launch.progress;
+  // Derived inline: seven entries, and this sits below the component's early
+  // returns where a hook would violate the rules of hooks.
+  const progressSegments = progress
+    ? PROGRESS_STATES.map((spec) => ({ ...spec, count: spec.count(progress) }))
+    : [];
 
   const manifest = (launch.manifest || {}) as ManifestData;
   const manifestAgent = manifest.agent || {};
@@ -498,74 +598,45 @@ export const LaunchDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-surface-muted rounded-full h-2.5 overflow-hidden flex">
-            <div
-              className="bg-pass-solid h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.succeeded / progress.total) * 100 : 0}%` }}
-              title={`成功: ${progress.succeeded}`}
-            />
-            <div
-              className="bg-fail-solid h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.failed / progress.total) * 100 : 0}%` }}
-              title={`失败: ${progress.failed}`}
-            />
-            <div
-              className="bg-timeout-solid h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.timed_out / progress.total) * 100 : 0}%` }}
-              title={`超时: ${progress.timed_out}`}
-            />
-            <div
-              className="bg-running-solid h-full transition-all duration-300 animate-pulse"
-              style={{ width: `${progress.total > 0 ? (progress.running / progress.total) * 100 : 0}%` }}
-              title={`运行中: ${progress.running}`}
-            />
-            <div
-              className="bg-retry-solid h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.retry_wait / progress.total) * 100 : 0}%` }}
-              title={`等待重试: ${progress.retry_wait}`}
-            />
-            <div
-              className="bg-border-strong h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.cancelled / progress.total) * 100 : 0}%` }}
-              title={`已取消: ${progress.cancelled}`}
-            />
+          {/* Progress Bar — derived from the state list so that no state can be
+              silently dropped. Queued items are included; a launch whose work
+              has not started yet must not render an empty meter. */}
+          <div
+            data-testid="progress-meter"
+            className="w-full bg-surface-muted rounded-full h-2.5 overflow-hidden flex"
+          >
+            {progressSegments.map((segment) => (
+              <div
+                key={segment.state}
+                data-segment={segment.state}
+                data-share={segment.count}
+                className={clsx("h-full transition-all duration-300", segment.fillClass)}
+                style={{ width: `${progress.total > 0 ? (segment.count / progress.total) * 100 : 0}%` }}
+                title={`${segment.label}: ${segment.count}`}
+              />
+            ))}
           </div>
 
           {/* Grid Counts */}
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-1">
-            <div className="text-center p-2 rounded-lg bg-canvas border border-border">
+            {/* The denominator, not a state: flat and untinted so it cannot be
+                mistaken for one of the seven status buckets. */}
+            <div className="text-center p-2 rounded-lg border border-border-strong border-dashed">
               <span className="text-micro text-muted-foreground block">总用例</span>
-              <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.total}</span>
+              <span className="text-sm font-bold font-mono text-foreground">{progress.total}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-primary-subtle/60 border border-primary-border">
-              <span className="text-micro text-primary block">排队中</span>
-              <span className="text-sm font-bold font-mono text-primary-strong">{progress.queued + progress.pending}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-running-subtle/60 border border-running-border">
-              <span className="text-micro text-running block">运行中</span>
-              <span className="text-sm font-bold font-mono text-running-strong">{progress.running}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-pass-subtle/60 border border-pass-border">
-              <span className="text-micro text-pass block">成功</span>
-              <span className="text-sm font-bold font-mono text-pass-strong">{progress.succeeded}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-fail-subtle/60 border border-fail-border">
-              <span className="text-micro text-fail block">失败</span>
-              <span className="text-sm font-bold font-mono text-fail">{progress.failed}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-timeout-subtle/60 border border-timeout-border">
-              <span className="text-micro text-timeout block">超时</span>
-              <span className="text-sm font-bold font-mono text-timeout">{progress.timed_out}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-retry-subtle/60 border border-retry-border">
-              <span className="text-micro text-retry block">等待重试</span>
-              <span className="text-sm font-bold font-mono text-retry">{progress.retry_wait}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-surface-muted border border-border">
-              <span className="text-micro text-muted-foreground block">已取消</span>
-              <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.cancelled}</span>
-            </div>
+            {progressSegments.map((segment) => (
+              <div
+                key={segment.state}
+                data-card={segment.state}
+                className={clsx("text-center p-2 rounded-lg border", segment.cardClass)}
+              >
+                <span className={clsx("text-micro block", segment.labelClass)}>{segment.label}</span>
+                <span className={clsx("text-sm font-bold font-mono", segment.valueClass)}>
+                  {segment.count}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
