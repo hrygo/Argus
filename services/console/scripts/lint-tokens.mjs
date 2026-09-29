@@ -1,73 +1,94 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SRC_DIR = path.resolve(__dirname, "../src");
+const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src");
 
-const ALLOWED_HEX_FILES = new Set([
-  path.resolve(SRC_DIR, "design-system/tokens/colors.ts"),
-  path.resolve(SRC_DIR, "design-system/tokens.css"),
+// The only files permitted to contain raw values: the token definitions
+// themselves. Everything else must express styling through semantic tokens.
+const ALLOWED_RAW_VALUE_FILES = new Set([
+  path.join(SRC, "design-system/tokens/colors.ts"),
+  path.join(SRC, "design-system/tokens.css"),
 ]);
 
-const IGNORED_DIRS = ["__tests__", "test"];
+const IGNORED_DIRS = new Set(["__tests__", "test"]);
+const IGNORE_MARKER = "token-lint-ignore";
 
-function scanDir(dir, fileList = []) {
-  const files = fs.readdirSync(dir);
-  for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      if (!IGNORED_DIRS.includes(file)) {
-        scanDir(fullPath, fileList);
-      }
-    } else if (/\.(tsx|ts|css)$/.test(file)) {
-      fileList.push(fullPath);
+// Hex colors, excluding HTML numeric entities such as `&#123`.
+const HEX_COLOR = /(?<!&)#([0-9a-fA-F]{3,8})\b/g;
+
+// Raw Tailwind palette utilities, e.g. `bg-rose-50`, `text-slate-700`.
+const PALETTE_PREFIX =
+  "(?:text|bg|border|ring|outline|fill|stroke|from|via|to|divide|shadow|decoration|accent|caret)-";
+const PALETTE_NAMES =
+  "(?:rose|emerald|amber|sky|green|red|yellow|blue|gray|slate|zinc|neutral|stone|indigo|violet|purple|teal|cyan|orange|lime|fuchsia|pink)-";
+const RAW_PALETTE = new RegExp(
+  "(?:[a-z-]+:)*?" + PALETTE_PREFIX + PALETTE_NAMES + "\\d{2,3}\\b",
+  "g",
+);
+
+// Any remaining Tailwind arbitrary value, e.g. `w-[145px]` or `has-[:checked]`.
+// Structural uses (selectors, variant arguments) are legitimate but must be
+// declared explicitly with IGNORE_MARKER on the line or the line above.
+const ARBITRARY_VALUE = /(?:^|[\s"'`:])((?:[\w.-]+:)*[\w./&*()-]+-\[[^\]\s]+\])/g;
+
+function walk(dir, out = []) {
+  for (const entry of fs.readdirSync(dir)) {
+    const full = path.join(dir, entry);
+    if (fs.statSync(full).isDirectory()) {
+      if (!IGNORED_DIRS.has(entry)) walk(full, out);
+    } else if (/\.(tsx|ts|css)$/.test(entry) && entry !== "schema.d.ts") {
+      out.push(full);
     }
   }
-  return fileList;
+  return out;
 }
 
-let hasError = false;
-const files = scanDir(SRC_DIR);
+const violations = [];
 
-// Match hex colors (e.g. #fff, #1a2b3c), but avoid HTML numeric entities like &#123;
-const HEX_COLOR_REGEX = /(?<!&)#([0-9a-fA-F]{3,8})\b/g;
-const ARBITRARY_TAILWIND_COLOR = /(?:bg|text|border|ring|outline)-\[#[0-9a-fA-F]{3,8}\]/g;
+for (const file of walk(SRC)) {
+  if (ALLOWED_RAW_VALUE_FILES.has(file)) continue;
 
-for (const file of files) {
-  if (ALLOWED_HEX_FILES.has(file)) continue;
-
-  const content = fs.readFileSync(file, "utf8");
-  const lines = content.split("\n");
+  const lines = fs.readFileSync(file, "utf8").split("\n");
+  const rel = path.relative(SRC, file);
 
   lines.forEach((line, index) => {
-    // Check for hardcoded hex colors
-    const hexMatches = line.match(HEX_COLOR_REGEX);
-    if (hexMatches && !line.includes("// token-lint-ignore")) {
-      console.error(
-        `[Token Lint Error] Hardcoded hex color found in ${path.relative(SRC_DIR, file)}:${index + 1}`
-      );
-      console.error(`  Line: ${line.trim()}`);
-      hasError = true;
-    }
+    const prev = index > 0 ? lines[index - 1] : "";
+    if (line.includes(IGNORE_MARKER) || prev.includes(IGNORE_MARKER)) return;
 
-    // Check for arbitrary Tailwind color classes like bg-[#123456]
-    const arbitraryMatches = line.match(ARBITRARY_TAILWIND_COLOR);
-    if (arbitraryMatches && !line.includes("// token-lint-ignore")) {
-      console.error(
-        `[Token Lint Error] Arbitrary color class found in ${path.relative(SRC_DIR, file)}:${index + 1}`
-      );
-      console.error(`  Line: ${line.trim()}`);
-      hasError = true;
-    }
+    const report = (rule, match) => {
+      violations.push({ rel, line: index + 1, rule, match, text: line.trim() });
+    };
+
+    for (const m of line.matchAll(HEX_COLOR)) report("hardcoded hex color", m[0]);
+    for (const m of line.matchAll(RAW_PALETTE)) report("raw palette utility", m[0]);
+    for (const m of line.matchAll(ARBITRARY_VALUE)) report("arbitrary value", m[1]);
   });
 }
 
-if (hasError) {
-  console.error("\n❌ Design Token Lint failed! Please use semantic tokens from the Argus Design System.");
+if (violations.length > 0) {
+  const byRule = violations.reduce(
+    (acc, v) => ((acc[v.rule] = (acc[v.rule] ?? 0) + 1), acc),
+    {},
+  );
+  console.error("Design Token Lint failed:\n");
+  for (const v of violations) {
+    console.error(`  ${v.rel}:${v.line}  [${v.rule}] ${v.match}`);
+    console.error(`    ${v.text}`);
+  }
+  const summary = Object.entries(byRule)
+    .map(([rule, n]) => `${rule} x${n}`)
+    .join(", ");
+  console.error(`\n${violations.length} violation(s): ${summary}`);
+  console.error(
+    [
+      "",
+      "Use semantic tokens from src/design-system/tokens/.",
+      "If a raw value is genuinely unavoidable (structural selector, intrinsic grid),",
+      `add an explicit \`// ${IGNORE_MARKER}: <reason>\` comment on the line or the line above.`,
+    ].join("\n"),
+  );
   process.exit(1);
-} else {
-  console.log("✅ Design Token Lint: All files comply with Design System Tokens.");
 }
+
+console.log("Design Token Lint: all files use semantic tokens.");
