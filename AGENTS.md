@@ -6,6 +6,7 @@
 
 ## 目录
 
+0. [速查](#0-速查)
 1. [规范级别](#1-规范级别)
 2. [系统定位与架构边界](#2-系统定位与架构边界)
 3. [仓库地图](#3-仓库地图)
@@ -16,6 +17,41 @@
 8. [安全与敏感数据](#8-安全与敏感数据)
 9. [Definition of Done](#9-definition-of-done)
 10. [最终交付格式](#10-最终交付格式)
+11. [文档分工](#11-文档分工)
+
+---
+
+## 0. 速查
+
+最常用命令：
+
+```bash
+make validate                        # 唯一本地质量门禁（8 步，见 §4）
+make up / make down                  # 本地全栈启停
+make demo                            # Demo 回归（v1 2/6、v2 6/6）
+make console-test / console-e2e      # Console 门禁
+```
+
+四条硬边界（详见 §2）：
+
+1. 业务 Agent 零 Evaluation SDK；
+2. Langfuse 与 Argus 职责分离；
+3. `traceparent` 必须传播，正式 Experiment 四个版本必须可复现；
+4. `docs/openapi.json` 与 `services/console/src/api/schema.d.ts` 必须同步。
+
+按任务类型读取（渐进式披露：只读你要改的那一节）：
+
+| 你要改什么 | 必读 |
+|---|---|
+| FastAPI 路由 / 请求响应模型 | §4.2 第 5 步、§4.3、§5.1；改完执行 `python scripts/export_openapi.py` |
+| Agent Registry / 版本管理 | §5.2 |
+| 队列 / Worker / 状态机 / 取消恢复 | §5.3 |
+| Evaluator / Baseline / 对比 | §5.4 |
+| Console 前端（`services/console`） | §5.6 + `.agents/skills/argus-design-system/SKILL.md` |
+| Langfuse 界面语言镜像 | §5.7 + `deploy/langfuse/README.md` |
+| Database Schema | §5.1；迁移按序号追加到 `migrations/`，不修改已发布迁移 |
+| 提 PR 或参与贡献 | `CONTRIBUTING.md` |
+| 编写文档 | §11 |
 
 ---
 
@@ -66,7 +102,7 @@ Agent    = 普通业务应用，不感知 Evaluation Framework
 |---|---|---|---|
 | Eval Runner（控制面） | `services/eval-runner/` | Python 3.12 / FastAPI / SQLAlchemy / psycopg / Redis | `app/`、`docs/openapi.json` |
 | Console（管理前端） | `services/console/` | TypeScript / React / Vite / Vitest / Playwright / pnpm | `src/features/`、`e2e/` |
-| Demo Agent（被测样例） | `services/demo-agent/` | Python / FastAPI | `app.py` |
+| Demo Agent（被测样例） | `services/demo-agent/` | Python / FastAPI | `services/demo-agent/app.py` |
 | Langfuse i18n 镜像 | `deploy/langfuse/` | Dockerfile / Patch / Node 脚本 | `deploy/langfuse/README.md` |
 | 数据库 Schema | `migrations/` | PostgreSQL DDL | Runner 启动时由 `MigrationRunner` 顺序执行 |
 | Bootstrap 数据 | `config/agents.yaml`、`data/dataset.json` | YAML / JSON | Demo 回归与本地 bootstrap 使用 |
@@ -77,6 +113,7 @@ Agent    = 普通业务应用，不感知 Evaluation Framework
 - `scripts/validate.sh`：`make validate` 的真实实现，共 8 步，是 §4 的唯一事实来源。
 - `docs/openapi.json`：API 合约快照，由 `scripts/export_openapi.py` 生成。
 - `TECHNICAL_DESIGN.md`：总体技术设计基线；`walkthrough.md`、`VALIDATION_REPORT.md`：演示流程与验证记录。
+- `CONTRIBUTING.md`、`SECURITY.md`：贡献流程与安全报告渠道。
 
 ---
 
@@ -178,7 +215,7 @@ MAY：接收标准 `traceparent`、使用常规 OpenTelemetry instrumentation。
 ### 5.6 Console
 
 - 组件与数据获取遵循现有 `src/features/`、`src/components/` 结构，不新建平行体系。
-- API 类型来自 `src/api/schema.d.ts`（由 OpenAPI 生成），不得手写重复类型。
+- API 类型来自 `services/console/src/api/schema.d.ts`（由 OpenAPI 生成），不得手写重复类型。
 - 交互改动 MUST 覆盖 typecheck、vitest 与 Playwright E2E；删除、发布等破坏性操作必须二次确认。
 - **设计体系与 Token 约束**：UI 组件必须严格使用 `src/design-system/tokens/` 与 `tokens.css` 中的语义 Token。严禁在 `.tsx` / `.css` 中编写裸十六进制色值（如 `#ffffff`、`#171923`）或 Tailwind 任意颜色类（如 `bg-[#...]`、`text-[#...]`）。必须通过 `pnpm --dir services/console lint:tokens` 检查。
 
@@ -254,3 +291,23 @@ Dataset → Runner → Agent → Langfuse → Console → E2E
 影响与风险
 - ...
 ```
+
+---
+
+## 11. 文档分工
+
+| 文档 | 读者 | 写什么 | 不写什么 |
+|---|---|---|---|
+| `README.md` | 使用 Argus 的用户 | 定位、上手路径、能力概览、部署要点、文档导航 | 仓库结构、CI 细节、代码规范、内部回归细节 |
+| `AGENTS.md`（本文） | 本仓库的开发者与 Agent | 仓库地图、质量门禁、架构边界、子系统约束、交付格式 | 用户导览、与开发无关的产品介绍 |
+| `CONTRIBUTING.md` | 外部贡献者 | 贡献路径、开发环境、流程、门禁与 PR 要求 | 架构约束的完整解释（指向本文） |
+| `SECURITY.md` | 报告者与部署方 | 报告渠道、支持范围、披露流程、部署方责任 | 通用安全科普 |
+| `TECHNICAL_DESIGN.md` | 设计与开发 | 领域模型、状态机、API 设计的权威说明 | 快速上手 |
+| `deploy/langfuse/README.md` | 运维与开发 | i18n 镜像构建、发布与验收 | 全平台架构 |
+
+共同约定：
+
+- 详细 API 以 `docs/openapi.json` 为唯一事实来源，其他文档只引用不复制。
+- 文档中的命令、路径、端口与版本必须与仓库实测一致；不确定先运行再写。
+- 采用渐进式披露：入口文档给出结论与去处，细节留在对应专题文档，不在入口堆叠。
+- 改动任一份文档后，检查是否需要同步其他文档的链接与描述。

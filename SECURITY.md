@@ -1,0 +1,45 @@
+# 安全策略
+
+本文件说明如何向 Argus 报告安全问题，以及哪些问题由部署方自行负责。
+
+## 支持范围
+
+| 版本 / 分支 | 是否接收安全报告 |
+|---|---|
+| `main`（当前开发线） | ✅ |
+| 自行部署的旧镜像、历史快照 | ❌ 请先升级到 `main` 再验证 |
+
+## 报告漏洞
+
+**不要**通过公开 Issue、Pull Request 或 Discussion 报告安全漏洞。
+
+优先使用 GitHub 私有漏洞报告：仓库页 → **Security** → **Report a vulnerability**。
+若该功能未启用，请先开一个**不含任何利用细节**的 Issue 说明"希望就安全问题私下沟通"，维护者会提供私密渠道。
+
+报告中请包含：
+
+- 受影响组件（`services/eval-runner` / `services/console` / `services/demo-agent` / Langfuse i18n 镜像 / `migrations`）；
+- 复现步骤与最小样例；
+- 版本或 commit SHA、部署方式（本地 Compose / Langfuse Cloud / 自建镜像）；
+- 你判断的影响与利用前提；
+- 已知的缓解方式。
+
+## 响应与披露
+
+- 维护者会先确认收到、评估影响范围，再给出修复节奏；影响越大的问题优先级越高，具体时限取决于问题复杂度，不在此作服务等级承诺。
+- 修复以「代码修复 + 回归测试 + `make validate` 通过」为完成标准，合并后随下一次镜像或版本发布。
+- 建议在发布说明中致谢报告者；不希望署名的请在报告中注明。
+- 修复发布前，请不要公开利用细节或未披露的攻击路径。
+
+## 不属于本仓库漏洞的情况
+
+- **Langfuse 自身的漏洞**：请走 Langfuse 上游的安全渠道；本仓库只维护 i18n Patch Layer。
+- **Demo Agent 的预期行为**：Demo Agent v1 故意只通过 2/6 回归基线，用于验证评测链路。
+- **部署方应自行加固的部分**：网络暴露面、访问控制、TLS 终止、凭据轮换、Langfuse 项目权限、备份与审计。
+
+## 部署方责任
+
+- 生产环境不得沿用 `.env.poc` 中的演示凭据；
+- 正式 Launch 必须设置不可变、可定位的 `ARGUS_BUILD_ID`（commit SHA 或镜像摘要），空值与 `dev` / `latest` 不会被接受；
+- 敏感 Header（Authorization、Cookie）不得写入 Langfuse Trace；
+- 接入外部 Agent 时自行评估 timeout、重试边界与 SSRF 风险。
