@@ -10,10 +10,6 @@
   max-height: 85vh;
 }
 
-@utility max-h-code-panel {
-  max-height: 80vh;
-}
-
 @theme {
   --color-canvas: var(--argus-color-canvas);
   --color-surface: var(--argus-color-surface);
