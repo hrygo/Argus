@@ -232,8 +232,6 @@ def get_comparison_case(
             (item for item in candidate_snapshot.items if item.get("dataset_item_id") == dataset_item_id),
             None,
         )
-        if candidate_case is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comparison case not found")
 
         comparison_manifest = candidate_snapshot.manifest.get("comparison", {})
         baseline_id = comparison_manifest.get("baseline_snapshot_id")
@@ -246,6 +244,8 @@ def get_comparison_case(
              if item.get("dataset_item_id") == dataset_item_id),
             None,
         )
+        if candidate_case is None and baseline_case is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comparison case not found")
 
         if baseline_snapshot is None:
             classification, reason = "NOT_COMPARABLE", "BASELINE_NOT_BOUND"
@@ -271,9 +271,10 @@ def get_comparison_case(
             trace_url=baseline_case.get("trace_url") if baseline_case else (baseline_launch.langfuse_experiment_url if baseline_launch else None),
         )
         candidate_output = fetch_observation_output(
-            candidate_case.get("output_ref"),
-            scores=candidate_case.get("scores"),
-            trace_url=candidate_case.get("trace_url") or candidate_launch.langfuse_experiment_url,
+            candidate_case.get("output_ref") if candidate_case else None,
+            scores=candidate_case.get("scores") if candidate_case else {},
+            trace_url=(candidate_case.get("trace_url") if candidate_case else None)
+            or candidate_launch.langfuse_experiment_url,
         )
         return ComparisonCaseOutputResponse(
             launch_id=launch_id,

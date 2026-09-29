@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ComparisonReport } from "../../features/launches/ComparisonReport";
 import { api } from "../../api/client";
 
@@ -11,8 +12,8 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
-const summaryFor = (snapshotId: string) => ({
-  launch_id: "candidate-launch",
+const summaryFor = (snapshotId: string, launchId = "candidate-launch") => ({
+  launch_id: launchId,
   snapshot_id: snapshotId,
   revision: snapshotId.endsWith("new") ? 2 : 1,
   created_at: "2026-09-28T00:00:00Z",
@@ -54,8 +55,8 @@ const metrics = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const comparisonPage = (snapshotId: string, caseId: string, nextCursor: number | null) => ({
-  launch_id: "candidate-launch",
+const comparisonPage = (snapshotId: string, caseId: string, nextCursor: number | null, launchId = "candidate-launch") => ({
+  launch_id: launchId,
   candidate_snapshot_id: snapshotId,
   baseline_snapshot_id: "baseline-snapshot",
   baseline_binding_revision: 3,
@@ -98,8 +99,8 @@ const comparisonPage = (snapshotId: string, caseId: string, nextCursor: number |
   next_cursor: nextCursor,
 });
 
-const caseOutput = (snapshotId: string) => ({
-  launch_id: "candidate-launch",
+const caseOutput = (snapshotId: string, launchId = "candidate-launch") => ({
+  launch_id: launchId,
   candidate_snapshot_id: snapshotId,
   baseline_snapshot_id: "baseline-snapshot",
   dataset_item_id: "case-1",
@@ -108,6 +109,29 @@ const caseOutput = (snapshotId: string) => ({
   baseline: { output_status: "AVAILABLE", output: { answer: "base" }, scores: { correctness: 0.9 }, retryable: false, truncated: false, trace_url: "https://langfuse.example/trace-baseline" },
   candidate: { output_status: "FETCH_FAILED", output: null, reason: "UPSTREAM_ERROR", scores: { correctness: 0.7 }, retryable: true, truncated: false, trace_url: "https://langfuse.example/trace-candidate" },
 });
+
+const ComparisonReportRoute = ({ launchStatus }: { launchStatus: string }) => {
+  const { launchId = "" } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const goTo = (path: string) => {
+    window.history.replaceState(window.history.state, "", path);
+    navigate(path);
+  };
+
+  return (
+    <>
+      <output data-testid="router-location">{location.pathname}{location.search}</output>
+      <button type="button" onClick={() => goTo("/launches/other-launch?snapshot_id=other-snapshot")}>
+        切换到其他 Launch
+      </button>
+      <button type="button" onClick={() => goTo("/launches/candidate-launch?snapshot_id=history-snapshot")}>
+        切换到同 Launch 历史修订
+      </button>
+      <ComparisonReport launchId={launchId} launchStatus={launchStatus} environment="production" />
+    </>
+  );
+};
 
 describe("ComparisonReport", () => {
   let queryClient: QueryClient;
@@ -119,22 +143,28 @@ describe("ComparisonReport", () => {
     latestSummaryReads = 0;
     window.history.replaceState({}, "", "/launches/candidate-launch");
     (api.GET as any).mockImplementation((path: string, options: any) => {
+      const launchId = options.params.path.launch_id;
       if (path.endsWith("/summary")) {
         const requested = options.params.query.snapshot_id;
-        if (requested) return Promise.resolve({ data: summaryFor(requested) });
+        if (requested) return Promise.resolve({ data: summaryFor(requested, launchId) });
         latestSummaryReads += 1;
-        return Promise.resolve({ data: summaryFor(latestSummaryReads > 1 ? "candidate-snapshot-new" : "candidate-snapshot") });
+        return Promise.resolve({ data: summaryFor(
+          latestSummaryReads > 1 ? "candidate-snapshot-new" : "candidate-snapshot",
+          launchId,
+        ) });
       }
       if (path.includes("/baselines")) {
         return Promise.resolve({ error: {}, response: { status: 404 } });
       }
       if (path.endsWith("/comparison/case")) {
-        return Promise.resolve({ data: caseOutput(options.params.query.snapshot_id) });
+        return Promise.resolve({ data: caseOutput(options.params.query.snapshot_id, launchId) });
       }
       if (path.endsWith("/comparison")) {
         const { cursor, snapshot_id: snapshotId } = options.params.query;
         return Promise.resolve({
-          data: cursor === 0 ? comparisonPage(snapshotId, "case-1", 1) : comparisonPage(snapshotId, "case-2", null),
+          data: cursor === 0
+            ? comparisonPage(snapshotId, "case-1", 1, launchId)
+            : comparisonPage(snapshotId, "case-2", null, launchId),
         });
       }
       return Promise.resolve({ data: null });
@@ -143,16 +173,22 @@ describe("ComparisonReport", () => {
   });
 
   const renderReport = (launchStatus = "COMPLETED") => render(
-    <QueryClientProvider client={queryClient}>
-      <ComparisonReport launchId="candidate-launch" launchStatus={launchStatus} environment="production" />
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={[`${window.location.pathname}${window.location.search}`]}>
+      <QueryClientProvider client={queryClient}>
+        <Routes>
+          <Route path="/launches/:launchId" element={<ComparisonReportRoute launchStatus={launchStatus} />} />
+        </Routes>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 
   it("pins the first revision in the URL and sends it on every comparison page", async () => {
     renderReport();
 
     expect(await screen.findByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" })).toBeInTheDocument();
-    expect(window.location.search).toBe("?snapshot_id=candidate-snapshot");
+    await waitFor(() => expect(screen.getByTestId("router-location")).toHaveTextContent(
+      "/launches/candidate-launch?snapshot_id=candidate-snapshot",
+    ));
     expect(screen.getByText("banking-agent@2.3.0")).toBeInTheDocument();
     expect(screen.getByText("banking-agent@2.4.0")).toBeInTheDocument();
     expect(within(screen.getByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" })).getByText("-20.0 pp")).toBeInTheDocument();
@@ -167,7 +203,7 @@ describe("ComparisonReport", () => {
     expect(screen.getByRole("table", { name: "Baseline 与 Candidate 全量运行健康指标" })).toHaveTextContent("80.0%");
     expect(screen.getByRole("table", { name: "Baseline 与 Candidate 全量运行健康指标" })).toHaveTextContent("1");
 
-    fireEvent.click(screen.getByRole("button", { name: "加载更多用例（已显示 1 条）" }));
+    fireEvent.click(await screen.findByRole("button", { name: "加载更多用例（已显示 1 条）" }));
     expect(await screen.findByText("case-2")).toBeInTheDocument();
     await waitFor(() => {
       const comparisonCalls = (api.GET as any).mock.calls.filter((call: any[]) => call[0].endsWith("/comparison"));
@@ -192,7 +228,9 @@ describe("ComparisonReport", () => {
   it("binds the currently displayed snapshot as the environment baseline", async () => {
     renderReport();
     await screen.findByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
-    await waitFor(() => expect(window.location.search).toBe("?snapshot_id=candidate-snapshot"));
+    await waitFor(() => expect(screen.getByTestId("router-location")).toHaveTextContent(
+      "/launches/candidate-launch?snapshot_id=candidate-snapshot",
+    ));
     const setBaselineButton = await screen.findByRole("button", { name: "设为当前环境 Baseline" });
     await waitFor(() => expect(setBaselineButton).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "设为当前环境 Baseline" }));
@@ -213,7 +251,9 @@ describe("ComparisonReport", () => {
     renderReport();
     expect(await screen.findByRole("button", { name: "查看最新修订" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "查看最新修订" }));
-    await waitFor(() => expect(window.location.search).toBe("?snapshot_id=candidate-snapshot-new"));
+    await waitFor(() => expect(screen.getByTestId("router-location")).toHaveTextContent(
+      "/launches/candidate-launch?snapshot_id=candidate-snapshot-new",
+    ));
     await waitFor(() => expect((api.GET as any).mock.calls.some((call: any[]) => (
       call[0].endsWith("/comparison") && call[1].params.query.snapshot_id === "candidate-snapshot-new"
     ))).toBe(true));
@@ -237,5 +277,60 @@ describe("ComparisonReport", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("uses the route snapshot when a cached report is reused for another Launch", async () => {
+    renderReport();
+    await screen.findByText("case-1");
+    fireEvent.click(await screen.findByRole("button", { name: "加载更多用例（已显示 1 条）" }));
+    expect(await screen.findByText("case-2")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "查看双侧输出" })[0]);
+    expect(await screen.findByRole("dialog", { name: "Case 双侧结果" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "REGRESSION (1)" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "切换到其他 Launch" }));
+    await waitFor(() => expect(screen.getByTestId("router-location")).toHaveTextContent(
+      "/launches/other-launch?snapshot_id=other-snapshot",
+    ));
+    await waitFor(() => {
+      expect((api.GET as any).mock.calls.some((call: any[]) => (
+        call[0].endsWith("/summary") && call[1].params.path.launch_id === "other-launch"
+          && call[1].params.query.snapshot_id === "other-snapshot"
+      ))).toBe(true);
+      expect((api.GET as any).mock.calls.some((call: any[]) => (
+        call[0].endsWith("/comparison") && call[1].params.path.launch_id === "other-launch"
+          && call[1].params.query.snapshot_id === "other-snapshot"
+          && call[1].params.query.classification === undefined
+          && call[1].params.query.cursor === 0
+      ))).toBe(true);
+    });
+    expect(screen.queryByRole("dialog", { name: "Case 双侧结果" })).not.toBeInTheDocument();
+  });
+
+  it("uses a new route snapshot when the same Launch switches to a historical revision", async () => {
+    renderReport();
+    await screen.findByText("case-1");
+    fireEvent.click(await screen.findByRole("button", { name: "加载更多用例（已显示 1 条）" }));
+    expect(await screen.findByText("case-2")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "查看双侧输出" })[0]);
+    expect(await screen.findByRole("dialog", { name: "Case 双侧结果" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "REGRESSION (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "切换到同 Launch 历史修订" }));
+    await waitFor(() => expect(screen.getByTestId("router-location")).toHaveTextContent(
+      "/launches/candidate-launch?snapshot_id=history-snapshot",
+    ));
+    await waitFor(() => {
+      expect((api.GET as any).mock.calls.some((call: any[]) => (
+        call[0].endsWith("/summary") && call[1].params.path.launch_id === "candidate-launch"
+          && call[1].params.query.snapshot_id === "history-snapshot"
+      ))).toBe(true);
+      expect((api.GET as any).mock.calls.some((call: any[]) => (
+        call[0].endsWith("/comparison") && call[1].params.path.launch_id === "candidate-launch"
+          && call[1].params.query.snapshot_id === "history-snapshot"
+          && call[1].params.query.classification === undefined
+          && call[1].params.query.cursor === 0
+      ))).toBe(true);
+    });
+    expect(screen.queryByRole("dialog", { name: "Case 双侧结果" })).not.toBeInTheDocument();
   });
 });

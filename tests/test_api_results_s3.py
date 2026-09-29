@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -15,7 +16,17 @@ from app.result_snapshots import create_result_snapshot  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 
-def _launch(db_mgr, quality: str, score: float, baseline_snapshot_id: str | None = None, *, dataset_id="dataset-golden", source="seed", observation_id=None):
+def _launch(
+    db_mgr,
+    quality: str,
+    score: float,
+    baseline_snapshot_id: str | None = None,
+    *,
+    dataset_id="dataset-golden",
+    source="seed",
+    observation_id=None,
+    case_id="case-1",
+):
     launch_id = str(uuid.uuid4())
     manifest = {
         "schema_version": "1.1",
@@ -25,7 +36,7 @@ def _launch(db_mgr, quality: str, score: float, baseline_snapshot_id: str | None
             "dataset_name": "golden",
             "dataset_version": "sha256:same",
             "snapshot_digest": "same",
-            "items": [{"id": "case-1", "input": {"q": "same"}, "expected_output": {"a": 1}, "metadata": {}}],
+            "items": [{"id": case_id, "input": {"q": "same"}, "expected_output": {"a": 1}, "metadata": {}}],
         },
         "agent": {"agent_id": "test-agent", "version": "v1", "spec_digest": "digest"},
         "evaluators": [{"id": "correctness", "version": "1.0.0", "threshold": 0.8, "direction": "higher_is_better"}],
@@ -56,7 +67,7 @@ def _launch(db_mgr, quality: str, score: float, baseline_snapshot_id: str | None
         session.add(ExperimentItemExecutionRecord(
             id=str(uuid.uuid4()),
             launch_id=launch_id,
-            dataset_item_id="case-1",
+            dataset_item_id=case_id,
             execution_status="succeeded",
             eval_status="succeeded",
             quality_conclusion=quality,
@@ -178,6 +189,82 @@ def test_different_or_unknown_dataset_identity_disables_case_comparison(setup_ru
     unknown = api_results.get_launch_comparison(unknown_candidate, classification=None, limit=50, cursor=0)
     assert unknown.items[0]["reason"] == "DATASET_IDENTITY_UNKNOWN"
     assert unknown.summary["comparable_case_count"] == 0
+
+
+def test_comparison_case_details_support_baseline_only_candidate_only_and_missing_cases(
+    setup_runtime, monkeypatch
+):
+    from fastapi import HTTPException
+
+    db_mgr, _, _, _, _, _ = setup_runtime
+    baseline_launch, baseline_snapshot = _launch(db_mgr, "pass", 1.0, case_id="case-1")
+    candidate_launch, candidate_snapshot = _launch(
+        db_mgr,
+        "pass",
+        0.9,
+        baseline_snapshot,
+        case_id="case-2",
+    )
+    monkeypatch.setattr(api_results, "_db_manager", lambda: db_mgr)
+
+    baseline_observation_id = f"obs-{baseline_launch}"
+    baseline_trace_id = f"trace-{baseline_launch}"
+    candidate_observation_id = f"obs-{candidate_launch}"
+    candidate_trace_id = f"trace-{candidate_launch}"
+
+    class Observations:
+        def get_many(self, **_kwargs):
+            return SimpleNamespace(data=[
+                SimpleNamespace(
+                    id=baseline_observation_id,
+                    trace_id=baseline_trace_id,
+                    output={"answer": "baseline-only output"},
+                ),
+                SimpleNamespace(
+                    id=candidate_observation_id,
+                    trace_id=candidate_trace_id,
+                    output={"answer": "candidate-only output"},
+                ),
+            ])
+
+    monkeypatch.setattr(
+        "app.result_outputs.get_langfuse_client_safe",
+        lambda: SimpleNamespace(api=SimpleNamespace(observations=Observations())),
+    )
+
+    baseline_only = api_results.get_comparison_case(
+        candidate_launch,
+        snapshot_id=candidate_snapshot,
+        dataset_item_id="case-1",
+    )
+    assert baseline_only.classification == "NOT_COMPARABLE"
+    assert baseline_only.reason == "CASE_MISSING"
+    assert baseline_only.baseline.output_status == "AVAILABLE"
+    assert baseline_only.baseline.output == {"answer": "baseline-only output"}
+    assert baseline_only.baseline.scores == {"correctness": 1.0}
+    assert baseline_only.candidate.output_status == "NO_REFERENCE"
+    assert baseline_only.candidate.reason == "NO_OUTPUT_REFERENCE"
+    assert baseline_only.candidate.scores == {}
+
+    candidate_only = api_results.get_comparison_case(
+        candidate_launch,
+        snapshot_id=candidate_snapshot,
+        dataset_item_id="case-2",
+    )
+    assert candidate_only.classification == "NOT_COMPARABLE"
+    assert candidate_only.reason == "CASE_MISSING"
+    assert candidate_only.baseline.output_status == "NO_REFERENCE"
+    assert candidate_only.candidate.output_status == "AVAILABLE"
+    assert candidate_only.candidate.output == {"answer": "candidate-only output"}
+    assert candidate_only.candidate.scores == {"correctness": 0.9}
+
+    with pytest.raises(HTTPException) as missing:
+        api_results.get_comparison_case(
+            candidate_launch,
+            snapshot_id=candidate_snapshot,
+            dataset_item_id="case-3",
+        )
+    assert missing.value.status_code == 404
 
 
 def test_comparison_health_uses_full_snapshots_and_quality_uses_common_cases(setup_runtime, monkeypatch):

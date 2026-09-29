@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
@@ -60,6 +61,12 @@ type Comparison = Omit<GeneratedComparison, "versions" | "summary" | "items" | "
 
 const TERMINAL = new Set(["COMPLETED", "PARTIAL_FAILED", "FAILED", "CANCELLED"]);
 const FILTERS = ["ALL", "REGRESSION", "IMPROVEMENT", "UNCHANGED", "NOT_COMPARABLE"] as const;
+type ReportViewState = {
+  launchId: string;
+  snapshotId: string | null;
+  filter: (typeof FILTERS)[number];
+  selectedCase: string | null;
+};
 
 const percent = (value: number | null | undefined) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 const number = (value: number | null | undefined, suffix = "") => value == null ? "—" : `${value.toFixed(2)}${suffix}`;
@@ -81,12 +88,35 @@ export const ComparisonReport: React.FC<{
   environment: string;
 }> = ({ launchId, launchStatus, environment }) => {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("ALL");
-  const [snapshotId, setSnapshotId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("snapshot_id"));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const snapshotId = searchParams.get("snapshot_id");
   const [latestRequest, setLatestRequest] = useState(0);
-  const [selectedCase, setSelectedCase] = useState<string | null>(null);
+  const [viewState, setViewState] = useState<ReportViewState>(() => ({
+    launchId,
+    snapshotId,
+    filter: "ALL",
+    selectedCase: null,
+  }));
+  const isViewStateCurrent = viewState.launchId === launchId && viewState.snapshotId === snapshotId;
+  const filter = isViewStateCurrent ? viewState.filter : "ALL";
+  const selectedCase = isViewStateCurrent ? viewState.selectedCase : null;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const canReadResults = TERMINAL.has(launchStatus) || Boolean(snapshotId);
+
+  useEffect(() => {
+    if (isViewStateCurrent) return;
+    setViewState({ launchId, snapshotId, filter: "ALL", selectedCase: null });
+  }, [isViewStateCurrent, launchId, snapshotId]);
+
+  const updateViewState = (update: Partial<Pick<ReportViewState, "filter" | "selectedCase">>) => {
+    setViewState((current) => {
+      const currentForRoute = current.launchId === launchId && current.snapshotId === snapshotId;
+      const base = currentForRoute
+        ? current
+        : { launchId, snapshotId, filter: "ALL" as const, selectedCase: null };
+      return { ...base, ...update, launchId, snapshotId };
+    });
+  };
 
   const summaryQuery = useQuery({
     queryKey: queryKeys.launches.summary(launchId, snapshotId, latestRequest),
@@ -103,21 +133,26 @@ export const ComparisonReport: React.FC<{
   });
 
   useEffect(() => {
-    if (snapshotId || !summaryQuery.data?.snapshot_id) return;
+    if (
+      snapshotId ||
+      summaryQuery.data?.launch_id !== launchId ||
+      !summaryQuery.data.snapshot_id
+    ) return;
     const resolvedSnapshotId = summaryQuery.data.snapshot_id;
-    setSnapshotId(resolvedSnapshotId);
-    const url = new URL(window.location.href);
-    url.searchParams.set("snapshot_id", resolvedSnapshotId);
-    window.history.replaceState(window.history.state, "", url);
-  }, [snapshotId, summaryQuery.data?.snapshot_id]);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (!next.has("snapshot_id")) next.set("snapshot_id", resolvedSnapshotId);
+      return next;
+    }, { replace: true });
+  }, [launchId, setSearchParams, snapshotId, summaryQuery.data?.launch_id, summaryQuery.data?.snapshot_id]);
 
   const showLatestSnapshot = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("snapshot_id");
-    window.history.replaceState(window.history.state, "", url);
-    setFilter("ALL");
-    setSelectedCase(null);
-    setSnapshotId(null);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("snapshot_id");
+      return next;
+    }, { replace: true });
+    setViewState({ launchId, snapshotId: null, filter: "ALL", selectedCase: null });
     setLatestRequest((request) => request + 1);
   };
 
@@ -315,7 +350,7 @@ export const ComparisonReport: React.FC<{
                 key={value}
                 type="button"
                 aria-pressed={filter === value}
-                onClick={() => setFilter(value)}
+                onClick={() => updateViewState({ filter: value })}
                 className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${filter === value ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted-foreground hover:bg-canvas"}`}
               >
                 {value === "ALL" ? "全部" : `${value} (${comparison.classification_counts[value] ?? 0})`}
@@ -342,7 +377,7 @@ export const ComparisonReport: React.FC<{
                         {row.candidate_trace_url && <a href={row.candidate_trace_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">Candidate Trace <ExternalLink className="h-3 w-3" /></a>}
                         {row.dataset_item_id && row.classification === "REGRESSION" && snapshotId && <Button variant="secondary" className="text-xs" onClick={(event) => {
                           triggerRef.current = event.currentTarget;
-                          setSelectedCase(row.dataset_item_id ?? null);
+                          updateViewState({ selectedCase: row.dataset_item_id ?? null });
                         }}>查看双侧输出</Button>}
                       </div>
                     </td>
@@ -370,7 +405,7 @@ export const ComparisonReport: React.FC<{
         datasetItemId={selectedCase}
         triggerRef={triggerRef}
         onClose={() => {
-          setSelectedCase(null);
+          updateViewState({ selectedCase: null });
           triggerRef.current?.focus();
         }}
       />}
