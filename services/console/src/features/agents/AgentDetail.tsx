@@ -173,13 +173,10 @@ export const AgentDetail: React.FC = () => {
             title="暂无任何版本"
             description="该 Agent 尚未创建任何版本规格。请点击上方按钮创建 1.0.0 版本。"
             action={
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg"
-              >
-                <Plus className="w-3.5 h-3.5" />
+              <Button variant="primary" onClick={() => setIsCreateOpen(true)} className="text-xs">
+                <Plus aria-hidden="true" className="w-3.5 h-3.5" />
                 <span>立即创建版本</span>
-              </button>
+              </Button>
             }
           />
         )}
@@ -239,7 +236,9 @@ export const AgentDetail: React.FC = () => {
                       <td className="px-6 py-4 text-right space-x-2">
                         <Link
                           to={`/agents/${agent.id}/versions/${ver.version}`}
-                          className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary-strong"
+                          // SC 2.5.8 Target Size (Minimum): the bare text link
+                          // was 18px tall, below the 24px floor.
+                          className="inline-flex min-h-7 items-center gap-0.5 px-1.5 text-xs font-semibold text-primary hover:text-primary-strong"
                         >
                           <span>查看配置</span>
                           <ChevronRight className="w-3 h-3" />
@@ -254,7 +253,9 @@ export const AgentDetail: React.FC = () => {
                               }
                             }}
                             disabled={archiveMutation.isPending}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-fail transition-colors ml-2 cursor-pointer disabled:opacity-50"
+                            // SC 2.5.8 Target Size (Minimum): the bare text link
+                            // was 18px tall, below the 24px floor.
+                            className="inline-flex min-h-7 items-center gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-fail transition-colors ml-2 cursor-pointer disabled:opacity-50"
                           >
                             <Archive className="w-3 h-3" />
                             <span>归档</span>

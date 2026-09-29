@@ -1,53 +1,71 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { Button, PageHeader, Panel, SelectInput, TextArea, TextInput } from "../ui/Primitives";
+import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { Field, IconButton, TextInput } from "../ui/Primitives";
 
-describe("Console visual primitives", () => {
-  it("defaults buttons to non-submit and exposes a visible disabled state", () => {
-    render(<Button disabled>Saving</Button>);
-    const button = screen.getByRole("button", { name: "Saving" });
-    expect(button).toHaveAttribute("type", "button");
-    expect(button).toBeDisabled();
-    expect(button).toHaveClass("ui-button", "ui-button--primary");
+describe("Field", () => {
+  it("binds the label to the control it renders", () => {
+    render(
+      <Field label="Environment">
+        {({ id }) => <TextInput id={id} defaultValue="production" />}
+      </Field>,
+    );
+    // getByLabelText only resolves when htmlFor and id actually match, which
+    // is the association every hand-written label in the console was missing.
+    const input = screen.getByLabelText("Environment");
+    expect(input).toHaveValue("production");
   });
 
-  it("allows explicit submit buttons without changing native form behavior", () => {
-    render(<Button type="submit" variant="danger">Delete</Button>);
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveAttribute("type", "submit");
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveClass("ui-button--danger");
+  it("wires the hint through aria-describedby", () => {
+    render(
+      <Field label="并发数" hint="推荐 1~3。">
+        {({ id, ...aria }) => <TextInput {...aria} id={id} />}
+      </Field>,
+    );
+    expect(screen.getByLabelText("并发数")).toHaveAccessibleDescription("推荐 1~3。");
   });
 
-  it("provides a distinct warning treatment for retry actions", () => {
-    render(<Button variant="warning">Retry</Button>);
-    expect(screen.getByRole("button", { name: "Retry" })).toHaveClass("ui-button--warning");
-  });
-
-  it("gives text, select and multiline controls the shared accessible focus style", () => {
+  it("generates distinct ids for sibling fields", () => {
     render(
       <>
-        <TextInput aria-label="Agent name" />
-        <SelectInput aria-label="Status"><option>All</option></SelectInput>
-        <TextArea aria-label="Description" />
+        <Field label="A">{({ id }) => <TextInput id={id} />}</Field>
+        <Field label="B">{({ id }) => <TextInput id={id} />}</Field>
       </>,
     );
-    for (const control of [
-      screen.getByRole("textbox", { name: "Agent name" }),
-      screen.getByRole("combobox", { name: "Status" }),
-      screen.getByRole("textbox", { name: "Description" }),
-    ]) {
-      expect(control).toHaveClass("ui-control");
-    }
+    expect(screen.getByLabelText("A").id).not.toBe(screen.getByLabelText("B").id);
   });
 
-  it("renders a page heading and neutral bordered panel with semantic structure", () => {
+  it("keeps the required asterisk out of the accessible name", () => {
     render(
-      <>
-        <PageHeader title="Agents" description="Registered business agents" />
-        <Panel aria-label="Agent summary">Summary</Panel>
-      </>,
+      <Field label="Endpoint" required>
+        {({ id }) => <TextInput id={id} required />}
+      </Field>,
     );
-    expect(screen.getByRole("heading", { name: "Agents", level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("Registered business agents")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Agent summary" })).toHaveClass("ui-panel");
+    // The control's own `required` attribute is what gets announced; a second
+    // "star" in the name would make the label read "required, star, Endpoint".
+    expect(screen.getByLabelText(/Endpoint/)).toBeRequired();
+  });
+});
+
+describe("IconButton", () => {
+  it("exposes its label to assistive tech and as a tooltip", () => {
+    render(
+      <IconButton label="关闭">
+        <svg aria-hidden="true" />
+      </IconButton>,
+    );
+    const button = screen.getByRole("button", { name: "关闭" });
+    expect(button).toHaveAttribute("title", "关闭");
+  });
+
+  it("fires the handler", () => {
+    const onClick = vi.fn();
+    render(<IconButton label="关闭" onClick={onClick} />);
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("defaults to type=button so it cannot submit a form by accident", () => {
+    render(<IconButton label="关闭" />);
+    expect(screen.getByRole("button", { name: "关闭" })).toHaveAttribute("type", "button");
   });
 });

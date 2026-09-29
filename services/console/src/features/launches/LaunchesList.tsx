@@ -154,7 +154,11 @@ export const LaunchesList: React.FC = () => {
       />
 
       {/* Filter Bar */}
-      <div className="ui-panel flex flex-wrap items-center gap-2.5 p-3 text-xs">
+      <div
+        role="group"
+        aria-label="评测筛选"
+        className="ui-panel flex flex-wrap items-center gap-2.5 p-3 text-xs"
+      >
         <div className="flex items-center gap-1.5 text-muted-foreground font-semibold uppercase tracking-wider text-micro mr-1">
           <Filter className="w-3.5 h-3.5" />
           <span>过滤筛选:</span>
@@ -164,6 +168,7 @@ export const LaunchesList: React.FC = () => {
         <div className="relative min-w-col-xl">
           <TextInput
             type="text"
+            aria-label="按 Agent ID 过滤"
             placeholder="按 Agent ID 过滤..."
             value={filterAgent}
             onChange={(e) => setFilterAgent(e.target.value)}
@@ -173,6 +178,7 @@ export const LaunchesList: React.FC = () => {
 
         {/* Status Filter */}
         <SelectInput
+          aria-label="按执行状态过滤"
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           className="w-auto min-w-col-lg text-xs"
@@ -187,6 +193,7 @@ export const LaunchesList: React.FC = () => {
 
         {/* Quality Filter */}
         <SelectInput
+          aria-label="按质量结论过滤"
           value={filterQuality}
           onChange={(e) => setFilterQuality(e.target.value)}
           className="w-auto min-w-col-lg text-xs"
