@@ -4,6 +4,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
+const apiPort = process.env.ARGUS_E2E_API_PORT ?? "18080";
+const apiProxyTarget = `http://127.0.0.1:${apiPort}`;
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -15,7 +18,7 @@ export default defineConfig({
     port: 18083,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:18080",
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },
@@ -24,7 +27,7 @@ export default defineConfig({
     port: 18083,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:18080",
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },
