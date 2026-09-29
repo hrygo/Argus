@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Bot } from "lucide-react";
 import { api } from "../../api/client";
@@ -22,6 +22,12 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
   const [description, setDescription] = useState("");
   const [owner, setOwner] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Per-field messages; the banner alone cannot say which control is wrong.
+  const [fieldErrors, setFieldErrors] = useState<{
+    id?: string;
+    name?: string;
+  }>({});
+  const formRef = useRef<HTMLFormElement>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -54,12 +60,25 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id.trim() || !name.trim()) {
+    const next: typeof fieldErrors = {};
+    if (!id.trim()) next.id = "Agent ID 为必填项。";
+    if (!name.trim()) next.name = "显示名称为必填项。";
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) {
       setErrorMsg("请填写 Agent ID 与名称");
       return;
     }
     mutation.mutate();
   };
+
+  // After commit, not during the submit handler: `aria-invalid` only exists in
+  // the DOM once React has rendered the new field errors.
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return;
+    formRef.current
+      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      ?.focus();
+  }, [fieldErrors]);
 
   return (
     <Modal
@@ -81,7 +100,12 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
         </>
       }
     >
-      <form id={FORM_ID} onSubmit={handleSubmit} className="p-6 space-y-4">
+      <form
+        id={FORM_ID}
+        ref={formRef}
+        onSubmit={handleSubmit}
+        className="p-6 space-y-4"
+      >
           {errorMsg && (
             <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
@@ -93,6 +117,7 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
               label="Agent ID"
               required
               hint="全局唯一标识符，建议小写字母加中划线"
+              error={fieldErrors.id}
             >
               {({ id: fieldId, ...aria }) => (
                 <input
@@ -102,7 +127,12 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
                   required
                   placeholder="e.g. banking-agent"
                   value={id}
-                  onChange={(e) => setId(e.target.value)}
+                  onChange={(e) => {
+                    setId(e.target.value);
+                    if (fieldErrors.id) {
+                      setFieldErrors((prev) => ({ ...prev, id: undefined }));
+                    }
+                  }}
                   className="ui-control w-full text-sm font-mono"
                 />
               )}
@@ -110,15 +140,21 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
           </div>
 
           <div>
-            <Field label="显示名称" required>
-              {({ id: fieldId }) => (
+            <Field label="显示名称" required error={fieldErrors.name}>
+              {({ id: fieldId, ...aria }) => (
                 <input
+                  {...aria}
                   id={fieldId}
                   type="text"
                   required
                   placeholder="e.g. 银行核心业务助手"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (fieldErrors.name) {
+                      setFieldErrors((prev) => ({ ...prev, name: undefined }));
+                    }
+                  }}
                   className="ui-control w-full text-sm"
                 />
               )}
