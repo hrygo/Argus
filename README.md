@@ -209,27 +209,10 @@ Remote Agent Runner ── W3C Trace Context ──► 业务 Agent
 
 ---
 
-## 如何验证平台可用
+## 质量结论如何判定
 
-仓库内置一组固定回归样例：6 个金融场景，覆盖意图识别、Tool 选择、敏感信息保护、高风险升级人工等，用于检测 Runner、Evaluator、Trace、Dataset 与基础设施回归。
+新建 Launch 默认采用**逐项诊断**：分别记录意图、工具调用、敏感信息与升级处理四项评分。也可切换为**复合结论**，只记录一个 `overall_pass`。
 
-```text
-Agent v1: overall_pass = 2 / 6
-Agent v2: overall_pass = 6 / 6
-```
+**执行成功不等于质量通过**——Runner 跑完只是执行完成，是否放行由质量结论决定。未选择或被取消的诊断指标不参与本次判定；没有可用 Evaluator 时结论为 unknown，不会默认判通过。
 
-新建 Launch 默认采用**逐项诊断**（分别记录意图、工具调用、敏感信息与升级处理四项评分），也可切换为**复合结论**（只记录 `overall_pass`）。执行成功不等于质量通过；未选择或被取消的诊断指标不参与本次判定。该基线由自动化测试与 Langfuse Cloud E2E 保护。
-
----
-
-## 参与开发
-
-```text
-Issue / Design → RED → GREEN → REFACTOR → 目标测试 → make validate → CI / E2E
-```
-
-提交前必须让 `make validate` 通过（包含 OpenAPI 快照与 Console TypeScript 契约的同步检查）。完整的仓库地图、架构边界、子系统约束与交付格式见 [AGENTS.md](./AGENTS.md)。
-
-贡献流程与门禁清单见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-> 仓库当前尚未提供 `LICENSE` 与 Issue / PR 模板；许可协议确定前请勿对外分发或声明授权。
+仓库内置的回归基线与判定细节见 [AGENTS.md](./AGENTS.md)。
