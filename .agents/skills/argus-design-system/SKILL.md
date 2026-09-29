@@ -108,11 +108,15 @@ overrides listed there exist so the utility classes stay idiomatic
 The following are rejected by `pnpm --dir services/console lint:tokens`, which
 runs inside `make validate` and CI:
 
-- **No hardcoded hex** — `#fff`, `rgb(...)`, `hsl(...)`.
+- **No hardcoded hex** — `#fff`, `rgb(...)`, `hsl(...)`, `oklch(...)`,
+  `color-mix(...)`. Every one of these can produce a colour that has no
+  contrast assertion behind it. `color-mix()` is rejected even when its
+  arguments are tokens: anything it derives is a token that does not exist
+  yet, so nothing asserts its contrast either.
 - **No raw palette utilities** — `bg-rose-50`, `text-slate-700`,
   `border-emerald-200`. Use the status scale or a semantic token.
 - **No arbitrary values** — `w-[145px]`, `text-[11px]`, `max-h-[80vh]`.
-  Use the container scale (`w-col-lg`, `min-w-table-xl`, `max-h-code-panel`)
+  Use the container scale (`w-col-lg`, `min-w-table-xl`, `max-h-overlay-panel`)
   and the type scale (`text-micro`, `text-2xs`).
 
 ### When a raw value is genuinely unavoidable
