@@ -64,6 +64,8 @@ export interface FieldRenderProps {
   /** Id to place on the control so the label is programmatically bound. */
   id: string;
   "aria-describedby"?: string;
+  /** Set when the field is in an error state; reflects onto the control. */
+  "aria-invalid"?: true;
 }
 
 export interface FieldProps {
@@ -72,6 +74,16 @@ export interface FieldProps {
   labelSuffix?: React.ReactNode;
   /** Extra guidance rendered under the control and wired via aria-describedby. */
   hint?: React.ReactNode;
+  /**
+   * Validation message for this specific control. It is wired through
+   * `aria-describedby` alongside `hint` and announced via `role="alert"`.
+   *
+   * A form-level error banner cannot say *which* control is wrong: a screen
+   * reader announces the banner and moves on, leaving the user to guess. This
+   * puts the message on the control itself, so it is announced where the user
+   * is already looking and `aria-invalid` makes the state queryable.
+   */
+  error?: React.ReactNode;
   /**
    * Marks the field required. The asterisk is `aria-hidden` because the
    * control's own `required` attribute is what assistive tech announces;
@@ -95,12 +107,17 @@ export const Field: React.FC<FieldProps> = ({
   label,
   labelSuffix,
   hint,
+  error,
   required,
   className,
   children,
 }) => {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  // Both ids reach the control: dropping the hint while an error is showing
+  // would silence real guidance exactly when the user is already stuck.
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div className={className}>
       <div className="flex items-center gap-1.5 mb-1.5">
@@ -115,10 +132,23 @@ export const Field: React.FC<FieldProps> = ({
         </label>
         {labelSuffix}
       </div>
-      {children({ id, "aria-describedby": hintId })}
+      {children({
+        id,
+        "aria-describedby": describedBy,
+        ...(error ? { "aria-invalid": true as const } : {}),
+      })}
       {hint && (
         <p id={hintId} className="text-micro text-muted-foreground mt-1">
           {hint}
+        </p>
+      )}
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className="text-micro text-fail-strong mt-1"
+        >
+          {error}
         </p>
       )}
     </div>

@@ -24,6 +24,53 @@ describe("Field", () => {
     expect(screen.getByLabelText("并发数")).toHaveAccessibleDescription("推荐 1~3。");
   });
 
+  it("marks the control invalid and describes it with the error", () => {
+    render(
+      <Field label="版本号" error="版本号为必填项。">
+        {({ id, ...aria }) => <TextInput {...aria} id={id} />}
+      </Field>,
+    );
+    const input = screen.getByLabelText("版本号");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription("版本号为必填项。");
+  });
+
+  it("keeps the hint readable alongside the error", () => {
+    render(
+      <Field label="并发数" hint="推荐 1~3。" error="必须为正整数。">
+        {({ id, ...aria }) => <TextInput {...aria} id={id} />}
+      </Field>,
+    );
+    // Both ids have to reach the control: dropping the hint on error would
+    // silence real guidance exactly when the user is already stuck.
+    const input = screen.getByLabelText("并发数");
+    const describedBy = input.getAttribute("aria-describedby") ?? "";
+    expect(describedBy.split(/\s+/).filter(Boolean)).toHaveLength(2);
+    expect(input).toHaveAccessibleDescription(/推荐 1~3。/);
+    expect(input).toHaveAccessibleDescription(/必须为正整数。/);
+  });
+
+  it("announces the error when it appears", () => {
+    const { rerender } = render(
+      <Field label="版本号">{({ id }) => <TextInput id={id} />}</Field>,
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    rerender(
+      <Field label="版本号" error="版本号为必填项。">
+        {({ id }) => <TextInput id={id} />}
+      </Field>,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("版本号为必填项。");
+  });
+
+  it("leaves the control unmarked when there is no error", () => {
+    render(
+      <Field label="Endpoint">{({ id }) => <TextInput id={id} />}</Field>,
+    );
+    expect(screen.getByLabelText("Endpoint")).not.toHaveAttribute("aria-invalid");
+  });
+
   it("generates distinct ids for sibling fields", () => {
     render(
       <>

@@ -51,3 +51,74 @@ describe("CreateVersionDialog Help Indicators (Issue #18)", () => {
     expect(screen.getByText("env://DEMO_AUTH_TOKEN")).toBeInTheDocument();
   });
 });
+
+describe("CreateVersionDialog field-level validation", () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  const renderDialog = () =>
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CreateVersionDialog
+          agentId="banking-agent"
+          isOpen={true}
+          onClose={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+  // The submit button lives in the Modal footer and reaches the form through
+  // the `form` attribute, which jsdom does not resolve on click. Drive the
+  // form directly so this exercises the validation rather than the wiring;
+  // the button-to-form association is covered end-to-end.
+  const submit = () =>
+    fireEvent.submit(
+      document.getElementById("create-version-form") as HTMLFormElement,
+    );
+
+  it("marks the offending control invalid instead of only showing a banner", () => {
+    renderDialog();
+
+    const version = screen.getByRole("textbox", { name: /版本号/ });
+    expect(version).not.toHaveAttribute("aria-invalid");
+
+    submit();
+
+    // The banner names the field; the control itself has to carry the state,
+    // or a screen reader announces "请填写版本号与远程 HTTP 端点" and moves on
+    // with no indication of which input to go to.
+    expect(version).toHaveAttribute("aria-invalid", "true");
+    expect(version).toHaveAccessibleDescription(/版本号为必填项/);
+  });
+
+  it("sends focus to the first control that needs fixing", () => {
+    renderDialog();
+    submit();
+
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /版本号/ }));
+  });
+
+  it("clears the field error as soon as the user types", () => {
+    renderDialog();
+    submit();
+    expect(screen.getByRole("textbox", { name: /版本号/ })).toHaveAttribute("aria-invalid", "true");
+
+    fireEvent.change(screen.getByRole("textbox", { name: /版本号/ }), {
+      target: { value: "1.0.0" },
+    });
+
+    expect(screen.getByRole("textbox", { name: /版本号/ })).not.toHaveAttribute("aria-invalid");
+    expect(screen.queryByText(/版本号为必填项/)).not.toBeInTheDocument();
+  });
+
+  it("leaves a valid control unmarked", () => {
+    renderDialog();
+    submit();
+
+    // The endpoint is pre-filled, so only the version is at fault.
+    expect(screen.getByRole("textbox", { name: /远程调用端点/ })).not.toHaveAttribute(
+      "aria-invalid",
+    );
+  });
+});

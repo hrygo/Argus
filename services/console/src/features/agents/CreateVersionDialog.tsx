@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Layers } from "lucide-react";
 import { api } from "../../api/client";
@@ -37,6 +37,13 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
   const [environment, setEnvironment] = useState("staging");
   const [requestMappingStr, setRequestMappingStr] = useState('{"query": "input.user_message"}');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Per-field messages, because the form-level banner cannot say which
+  // control is wrong. See `Field`'s `error` prop.
+  const [fieldErrors, setFieldErrors] = useState<{
+    version?: string;
+    endpoint?: string;
+  }>({});
+  const formRef = useRef<HTMLFormElement>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -89,12 +96,26 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!version.trim() || !endpoint.trim()) {
+    const next: typeof fieldErrors = {};
+    if (!version.trim()) next.version = "版本号为必填项。";
+    if (!endpoint.trim()) next.endpoint = "远程调用端点为必填项。";
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) {
       setErrorMsg("请填写版本号与远程 HTTP 端点");
       return;
     }
     mutation.mutate();
   };
+
+  // Focus lands here rather than inside the submit handler: `aria-invalid` is
+  // only in the DOM once React has committed the new field errors, so querying
+  // for it during the submit finds nothing.
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return;
+    formRef.current
+      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      ?.focus();
+  }, [fieldErrors]);
 
   return (
     <Modal
@@ -117,7 +138,12 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
         </>
       }
     >
-        <form id={FORM_ID} onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form
+          id={FORM_ID}
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className="p-6 space-y-4"
+        >
           {errorMsg && (
             <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
@@ -130,6 +156,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
               required
               labelSuffix={<FieldHelp {...AGENT_VERSION_FIELD_HELPS.version} />}
               hint="创建后将永久冻结且不可变"
+              error={fieldErrors.version}
             >
               {({ id, ...aria }) => (
                 <TextInput
@@ -139,7 +166,12 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
                   required
                   placeholder="e.g. 1.0.0 或 v2"
                   value={version}
-                  onChange={(e) => setVersion(e.target.value)}
+                  onChange={(e) => {
+                    setVersion(e.target.value);
+                    if (fieldErrors.version) {
+                      setFieldErrors((prev) => ({ ...prev, version: undefined }));
+                    }
+                  }}
                   className="w-full text-sm font-mono"
                 />
               )}
@@ -168,15 +200,22 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
             label="远程调用端点 (HTTP POST)"
             required
             labelSuffix={<FieldHelp {...AGENT_VERSION_FIELD_HELPS.endpoint} />}
+            error={fieldErrors.endpoint}
           >
-            {({ id }) => (
+            {({ id, ...aria }) => (
               <TextInput
+                {...aria}
                 id={id}
                 type="url"
                 required
                 placeholder="http://agent-host:8080/invoke"
                 value={endpoint}
-                onChange={(e) => setEndpoint(e.target.value)}
+                onChange={(e) => {
+                  setEndpoint(e.target.value);
+                  if (fieldErrors.endpoint) {
+                    setFieldErrors((prev) => ({ ...prev, endpoint: undefined }));
+                  }
+                }}
                 className="w-full text-sm font-mono"
               />
             )}
