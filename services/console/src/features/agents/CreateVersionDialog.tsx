@@ -1,17 +1,15 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Plus, Layers } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
 import { FieldHelp } from "../../components/FieldHelp";
-import {
-  Field,
-  IconButton,
-  TextArea,
-  TextInput,
-} from "../../components/ui/Primitives";
+import { Button, Field, TextArea, TextInput } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
 import { AGENT_VERSION_FIELD_HELPS } from "./helpDocs";
+
+const FORM_ID = "create-version-form";
 
 interface CreateVersionDialogProps {
   agentId: string;
@@ -89,8 +87,6 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
     },
   });
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!version.trim() || !endpoint.trim()) {
@@ -101,19 +97,27 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-surface rounded-xl shadow-xl border border-border w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2 text-foreground">
-            <Layers className="w-5 h-5 text-primary" />
-            <h2 className="text-base font-bold">创建 AgentVersion 规格快照</h2>
-          </div>
-          <IconButton label="关闭" onClick={onClose}>
-            <X aria-hidden="true" className="w-4 h-4" />
-          </IconButton>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-code-panel overflow-y-auto">
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="创建 AgentVersion 规格快照"
+      icon={<Layers aria-hidden="true" className="w-5 h-5 text-primary" />}
+      // A half-written version snapshot must not be abandoned mid-flight.
+      dismissable={!mutation.isPending}
+      className="sm:max-w-table-xl"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button type="submit" form={FORM_ID} disabled={mutation.isPending}>
+            <Plus aria-hidden="true" className="w-4 h-4" />
+            <span>{mutation.isPending ? "创建中..." : "确认创建版本"}</span>
+          </Button>
+        </>
+      }
+    >
+        <form id={FORM_ID} onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
             <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
@@ -306,25 +310,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{mutation.isPending ? "创建中..." : "确认创建版本"}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };

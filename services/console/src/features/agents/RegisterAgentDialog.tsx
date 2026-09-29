@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Plus, Bot } from "lucide-react";
+import { Plus, Bot } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
-import { Field, IconButton } from "../../components/ui/Primitives";
+import { Button, Field } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
+
+const FORM_ID = "register-agent-form";
 
 interface RegisterAgentDialogProps {
   isOpen: boolean;
@@ -49,8 +52,6 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
     },
   });
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!id.trim() || !name.trim()) {
@@ -61,19 +62,26 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 backdrop-blur-xs p-4">
-      <div className="bg-surface rounded-xl shadow-xl border border-border w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2 text-foreground">
-            <Bot className="w-5 h-5 text-primary" />
-            <h2 className="text-base font-bold">注册新 Agent</h2>
-          </div>
-          <IconButton label="关闭" onClick={onClose}>
-            <X aria-hidden="true" className="w-4 h-4" />
-          </IconButton>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="注册新 Agent"
+      icon={<Bot aria-hidden="true" className="w-5 h-5 text-primary" />}
+      // A half-applied registration must not be abandoned by a stray click.
+      dismissable={!mutation.isPending}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button type="submit" form={FORM_ID} disabled={mutation.isPending}>
+            <Plus aria-hidden="true" className="w-4 h-4" />
+            <span>{mutation.isPending ? "注册中..." : "确认注册"}</span>
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
             <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
@@ -147,25 +155,7 @@ export const RegisterAgentDialog: React.FC<RegisterAgentDialogProps> = ({ isOpen
             </Field>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{mutation.isPending ? "注册中..." : "确认注册"}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };
