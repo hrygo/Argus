@@ -21,11 +21,17 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data, title, className =
   return (
     <div className={`relative rounded-lg border border-border bg-code text-code-text font-mono text-xs overflow-hidden ${className}`}>
       <div className="flex items-center justify-between px-3 py-1.5 bg-code-header border-b border-code-border">
-        <span className="text-code-muted font-medium">{title || "JSON"}</span>
+        {/* The title truncates and the button does not shrink. Without this the
+            copy button is pushed past the panel edge at narrow widths and the
+            container's `overflow-hidden` clips it away — still focusable by
+            keyboard, still announced, but impossible to click. */}
+        <span className="min-w-0 truncate text-code-muted font-medium">
+          {title || "JSON"}
+        </span>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-code-dim hover:text-code-hover text-xs focus:outline-none cursor-pointer"
+          className="flex shrink-0 items-center gap-1 text-code-dim hover:text-code-hover text-xs focus:outline-none cursor-pointer"
         >
           {copied ? <Check className="w-3.5 h-3.5 text-pass" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copied ? "已复制" : "复制"}</span>
