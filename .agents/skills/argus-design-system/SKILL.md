@@ -162,6 +162,14 @@ doing so silently rescales every existing usage.
   `elevation.test.ts` rejects off-scale steps in both directions.
 - A state that only changes colour is not a state. Every status surface pairs
   its tint with a label or a count.
+- Motion is allowed; unrequested motion is not. `index.css` carries a global
+  `prefers-reduced-motion: reduce` guard that collapses every duration to ~0,
+  so anything you animate is automatically spared for users who asked the OS
+  to reduce it. Two consequences for new work: an animation must never be the
+  only carrier of a status (pair it with text — `LoadingState` takes a
+  message, badges carry counts), and an element that animates in must still
+  be legible in its final state, because the guard shortens the animation
+  rather than removing it.
 
 ## Before Committing
 
