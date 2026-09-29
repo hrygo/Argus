@@ -10,6 +10,8 @@ const agent = {
   status: "active",
   version_count: 2,
   latest_version: "1.0.0",
+  launch_count: 0,
+  active_launch_count: 0,
   created_at: "2026-09-24T00:00:00Z",
 };
 
@@ -115,17 +117,37 @@ async function mockApi(page: Page): Promise<void> {
       json: [
         {
           id: "item-1",
+          // LaunchDetail rejects items whose `launch_id` does not match the
+          // page (the Issue #29 identity guard). The mock has to carry it or
+          // the whole detail view falls into its error state.
+          launch_id: LAUNCH_ID,
           dataset_item_id: "case-1",
-          status: "SUCCEEDED",
+          // ItemTable reads `execution_status` / `attempt_count`; an earlier
+          // mock used `status` / `attempts` and rendered a table of blanks,
+          // which made the attempt button unselectable.
+          execution_status: "SUCCEEDED",
           quality_conclusion: "pass",
-          attempts: 1,
+          attempt_count: 1,
+          dispatch_generation: 1,
+          scores: { intent_match: 1 },
+          final_attempt_http_status: 200,
+          final_attempt_latency_ms: 120,
+          execution_error: null,
+          eval_error: null,
         },
         {
           id: "item-2",
+          launch_id: LAUNCH_ID,
           dataset_item_id: "case-2",
-          status: "FAILED",
+          execution_status: "FAILED",
           quality_conclusion: "fail",
-          attempts: 2,
+          attempt_count: 2,
+          dispatch_generation: 2,
+          scores: { intent_match: 0 },
+          final_attempt_http_status: 500,
+          final_attempt_latency_ms: 3400,
+          execution_error: "upstream returned 500",
+          eval_error: null,
         },
       ],
     }),
@@ -146,6 +168,22 @@ async function mockApi(page: Page): Promise<void> {
   );
   await page.route(`**/api/v1/experiment-launches/${LAUNCH_ID}`, (route) =>
     route.fulfill({ json: launch }),
+  );
+
+  await page.route("**/api/v1/execution-attempts*", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "attempt-1",
+          item_execution_id: "item-1",
+          attempt_no: 1,
+          status: "SUCCEEDED",
+          http_status: 200,
+          latency_ms: 120,
+          started_at: "2026-09-24T00:01:00Z",
+        },
+      ],
+    }),
   );
 
   await page.route("**/api/v1/agents*", (route) => route.fulfill({ json: [agent] }));
@@ -210,6 +248,15 @@ async function auditOpen(page: Page, routePath: string, open: () => Promise<void
   await page.goto(routePath);
   await page.waitForLoadState("networkidle");
   await open();
+
+  // Guard against a vacuous pass. If the overlay never opened, axe would audit
+  // the bare route underneath and report the same clean result it already
+  // reports for that route on its own — the overlay would be untested while the
+  // test showed green. Every overlay in this file is a dialog or a drawer, and
+  // both carry role="dialog".
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.first()).toBeVisible();
+  await expect(dialog.first()).toContainText(/./);
   await page.waitForTimeout(200);
 
   const results = await new AxeBuilder({ page })
@@ -237,6 +284,24 @@ test.describe("WCAG 2.2 AA: overlay surfaces", () => {
   test("register-agent dialog", async ({ page }) => {
     await auditOpen(page, "/agents", () =>
       page.getByRole("button", { name: /注册 Agent/ }).first().click(),
+    );
+  });
+
+  test("create-version dialog", async ({ page }) => {
+    await auditOpen(page, `/agents/${AGENT_ID}`, () =>
+      page.getByRole("button", { name: "创建新版本" }).click(),
+    );
+  });
+
+  test("delete-agent dialog", async ({ page }) => {
+    await auditOpen(page, `/agents/${AGENT_ID}`, () =>
+      page.getByRole("button", { name: "删除 Agent" }).click(),
+    );
+  });
+
+  test("attempt drawer", async ({ page }) => {
+    await auditOpen(page, `/launches/${LAUNCH_ID}`, () =>
+      page.getByRole("button", { name: /次尝试/ }).first().click(),
     );
   });
 });
