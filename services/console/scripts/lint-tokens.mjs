@@ -8,6 +8,11 @@ const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src")
 // themselves. Everything else must express styling through semantic tokens.
 const ALLOWED_RAW_VALUE_FILES = new Set([
   path.join(SRC, "design-system/tokens/colors.ts"),
+  // Shadow definitions need `rgba(0, 0, 0, 0.1)` for their alpha channel.
+  // The colour scale has no "black at 10% alpha" token, and inventing one
+  // would put a shadow-only value into the palette that contrast assertions
+  // then have to reason about.
+  path.join(SRC, "design-system/tokens/elevation.ts"),
   path.join(SRC, "design-system/tokens.css"),
 ]);
 
@@ -16,6 +21,19 @@ const IGNORE_MARKER = "token-lint-ignore";
 
 // Hex colors, excluding HTML numeric entities such as `&#123`.
 const HEX_COLOR = /(?<!&)#([0-9a-fA-F]{3,8})\b/g;
+
+// Functional colour notations. `HEX_COLOR` cannot see these, so `rgb(0 0 0 /
+// .5)` and `hsl(210 40% 96%)` walk past a linter that documents them as
+// rejected.
+//
+// `color-mix()` is included deliberately even though it can be handed tokens
+// (`color-mix(in oklab, var(--argus-color-fail) 50%, white)`). It is the one
+// function that can derive *any* colour from literals, and the console has no
+// use for it: every surface it would produce is a token that does not exist
+// yet, which means it also does not have a contrast assertion behind it. The
+// IGNORE_MARKER escape hatch covers the day that changes.
+const FUNCTIONAL_COLOR =
+  /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\(/g;
 
 // Raw Tailwind palette utilities, e.g. `bg-rose-50`, `text-slate-700`.
 const PALETTE_PREFIX =
@@ -59,6 +77,7 @@ export function scanLine(line) {
   };
 
   collect("hardcoded hex color", HEX_COLOR);
+  collect("functional color notation", FUNCTIONAL_COLOR);
   collect("raw palette utility", RAW_PALETTE);
   collect("raw palette utility", RAW_BLACK_WHITE);
   collect("arbitrary value", ARBITRARY_VALUE, 1);

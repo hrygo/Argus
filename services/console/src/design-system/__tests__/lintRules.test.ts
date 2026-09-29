@@ -59,6 +59,51 @@ describe("design token lint rules", () => {
     });
   });
 
+  describe("functional color notations", () => {
+    it.each([
+      ["rgb(0 0 0)"],
+      ["rgba(0, 0, 0, 0.5)"],
+      ["hsl(210 40% 96%)"],
+      ["oklch(0.7 0.1 200)"],
+      ["color(display-p3 1 0 0)"],
+    ])("flags %s", (fn) => {
+      expect(rulesFor(`background: ${fn}`)).toContain(
+        "functional color notation",
+      );
+    });
+
+    // The alpha and slash forms are the ones that actually reach production
+    // code, so they must not slip through on a technicality.
+    it("flags the modern slash-alpha syntax", () => {
+      expect(rulesFor("background: rgb(0 0 0 / 50%)")).toContain(
+        "functional color notation",
+      );
+    });
+
+    it("accepts a token reference", () => {
+      expect(rulesFor("background: var(--argus-color-fail)")).toEqual([]);
+    });
+
+    // `color-mix` derives an arbitrary colour, and every colour it derives is
+    // a token that does not exist — so it has no contrast assertion behind it
+    // either. Flagged even when the arguments are tokens.
+    it("flags color-mix even when its arguments are tokens", () => {
+      expect(
+        rulesFor("background: color-mix(in oklab, var(--argus-color-fail) 50%, white)"),
+      ).toEqual(["functional color notation"]);
+    });
+
+    it("flags a color-mix built from bare CSS colour names", () => {
+      expect(rulesFor("background: color-mix(in srgb, red, blue)")).toEqual([
+        "functional color notation",
+      ]);
+    });
+
+    it("accepts calc, which is a length function rather than a colour", () => {
+      expect(rulesFor("width: calc(100% - 2rem)")).toEqual([]);
+    });
+  });
+
   describe("arbitrary values", () => {
     it("flags an arbitrary value and reports it without the leading space", () => {
       expect(matchesFor('className="w-[145px]"')).toEqual(["w-[145px]"]);
