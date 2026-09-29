@@ -146,6 +146,13 @@ doing so silently rescales every existing usage.
 - Status is expressed by `Badge tone`, not by hand-picked classes.
 - Layout shells use `layoutDimensions` (`w-sidebar`, `max-w-content`);
   tables use the `columnWidths` scale so columns stay aligned across views.
+- Overlays size themselves with the same scale: `max-w-modal` (560px) for a
+  confirmation, `max-w-modal-lg` (720px) for a dialog hosting a form,
+  `max-w-drawer` (480px) for a drawer. A dialog does not pass its own width —
+  it inherits the primitive's, so every overlay lands on the same geometry.
+  `containerScale.test.ts` fails the build if a width utility is used with no
+  `--container-*` behind it, because such a utility emits no CSS and the
+  constraint disappears without any error.
 - A state that only changes colour is not a state. Every status surface pairs
   its tint with a label or a count.
 
