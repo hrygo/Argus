@@ -6,6 +6,10 @@ export const queryKeys = {
     versions: (agentId: string) => [...queryKeys.agents.all, "versions", agentId] as const,
     version: (agentId: string, version: string) => [...queryKeys.agents.all, "version", agentId, version] as const,
   },
+  baselines: {
+    all: ["baselines"] as const,
+    detail: (agentId: string, environment: string) => [...queryKeys.baselines.all, agentId, environment] as const,
+  },
   evaluators: {
     all: ["evaluators"] as const,
     list: () => [...queryKeys.evaluators.all, "list"] as const,
@@ -19,5 +23,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.launches.all, "detail", id] as const,
     items: (launchId: string) => [...queryKeys.launches.all, "items", launchId] as const,
     attempts: (itemExecutionId: string) => [...queryKeys.launches.all, "attempts", itemExecutionId] as const,
+    summary: (launchId: string, snapshotId: string | null = null, latestRequest = 0) => [...queryKeys.launches.all, "summary", launchId, snapshotId ?? "latest", snapshotId ? 0 : latestRequest] as const,
+    comparison: (launchId: string, snapshotId: string, filter?: string) => [...queryKeys.launches.all, "comparison", launchId, snapshotId, filter] as const,
+    case: (launchId: string, snapshotId: string, datasetItemId: string) => [...queryKeys.launches.all, "case", launchId, snapshotId, datasetItemId] as const,
   },
 };

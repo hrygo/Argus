@@ -5,19 +5,23 @@ import json
 import time
 import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException
 from langfuse import get_client
 
+from .api_baselines import router as baselines_router
 from .api_evaluators import router as evaluators_router
 from .api_launches import router as launches_router
 from .api_registry import router as registry_router
+from .api_results import router as results_router
 from .api_system import router as system_router
 from .config import find_path, settings
 from .db import DatabaseManager, MigrationRunner
 from .execution import LaunchExecutionService
+from .langfuse_run_scores import LangfuseRunScoreSyncer
 from .langfuse_sync import LangfuseOutboxSyncer
 from .limiter import DistributedAgentLimiter, MemoryAgentLimiter, RedisDistributedLimiter
 from .manifest import LaunchService
@@ -91,6 +95,7 @@ orchestrator = LaunchOrchestrator(db_manager, queue_adapter, limiter)
 worker = ExecutionWorker(db_manager, queue_adapter, limiter)
 reconciler = ExecutionReconciler(db_manager, queue_adapter, limiter, langfuse_client=_client)
 outbox_syncer = LangfuseOutboxSyncer(db_manager, langfuse_client=_client)
+run_score_syncer = LangfuseRunScoreSyncer(db_manager, langfuse_client=_client)
 
 # 5. Initialize Launch Service
 launch_service = LaunchService(db_manager, registry, runner_version=settings.runner_version)
@@ -155,6 +160,7 @@ async def lifespan(app: FastAPI):
         while not stop_event.is_set():
             try:
                 processed = await asyncio.to_thread(outbox_syncer.process_batch, batch_size=1)
+                processed += await asyncio.to_thread(run_score_syncer.process_batch, batch_size=1)
                 if processed == 0:
                     await asyncio.sleep(2.0)
                 else:
@@ -193,6 +199,8 @@ app = FastAPI(
 app.include_router(registry_router)
 app.include_router(launches_router)
 app.include_router(evaluators_router)
+app.include_router(baselines_router)
+app.include_router(results_router)
 app.include_router(system_router)
 app.include_router(metrics_router)
 
@@ -308,7 +316,10 @@ async def run_experiment(request: ExperimentRequest) -> ExperimentResult:
 
         await asyncio.to_thread(_wait_for_langfuse)
         lf = _client()
-        dataset = await asyncio.to_thread(lf.get_dataset, request.dataset_name) if lf else None
+        dataset_version_dt = datetime.now(UTC)
+        dataset = await asyncio.to_thread(
+            lf.get_dataset, request.dataset_name, version=dataset_version_dt
+        ) if lf else None
         experiment_name = request.experiment_name or f"{request.agent_id}-{request.agent_version}"
 
         # Legacy experiment evaluator set: 5 item evaluators + 1 run evaluator
@@ -326,6 +337,7 @@ async def run_experiment(request: ExperimentRequest) -> ExperimentResult:
             agent_id=request.agent_id,
             agent_version=request.agent_version,
             dataset_name=request.dataset_name,
+            dataset_version=dataset_version_dt.isoformat(),
             dataset_id=str(getattr(dataset, "id", "")) or None,
             name=experiment_name,
             max_concurrency=request.max_concurrency,
@@ -357,6 +369,8 @@ async def run_experiment(request: ExperimentRequest) -> ExperimentResult:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         msg = str(exc)
+        if msg.startswith("RUNNER_"):
+            raise HTTPException(status_code=409, detail=msg) from exc
         if "not found" in msg.lower() or "archived" in msg.lower() or "inactive" in msg.lower():
             raise HTTPException(status_code=404, detail=msg) from exc
         raise HTTPException(status_code=400, detail=msg) from exc

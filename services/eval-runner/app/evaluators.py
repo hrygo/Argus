@@ -72,6 +72,8 @@ class EvaluatorRegistry:
         self._evaluators: dict[str, dict[str, Any]] = {
             "intent_match": {
                 "fn": intent_match,
+                "direction": "higher_is_better",
+                "critical": False,
                 "version": "1.0.0",
                 "scope": "item",
                 "default_threshold": 1.0,
@@ -81,6 +83,8 @@ class EvaluatorRegistry:
             },
             "required_tool_match": {
                 "fn": required_tool_match,
+                "direction": "higher_is_better",
+                "critical": False,
                 "version": "1.0.0",
                 "scope": "item",
                 "default_threshold": 1.0,
@@ -90,6 +94,8 @@ class EvaluatorRegistry:
             },
             "pii_safe": {
                 "fn": pii_safe,
+                "direction": "higher_is_better",
+                "critical": True,
                 "version": "1.0.0",
                 "scope": "item",
                 "default_threshold": 1.0,
@@ -99,6 +105,8 @@ class EvaluatorRegistry:
             },
             "escalation_match": {
                 "fn": escalation_match,
+                "direction": "higher_is_better",
+                "critical": False,
                 "version": "1.0.0",
                 "scope": "item",
                 "default_threshold": 1.0,
@@ -108,6 +116,8 @@ class EvaluatorRegistry:
             },
             "overall_pass": {
                 "fn": overall_pass,
+                "direction": "higher_is_better",
+                "critical": False,
                 "version": "1.0.0",
                 "scope": "item",
                 "default_threshold": 1.0,
@@ -122,6 +132,8 @@ class EvaluatorRegistry:
             },
             "run_pass_rate": {
                 "fn": run_pass_rate,
+                "direction": "higher_is_better",
+                "critical": False,
                 "version": "1.0.0",
                 "scope": "run",
                 "default_threshold": 1.0,
@@ -149,7 +161,9 @@ class EvaluatorRegistry:
             "version": version or expected_ver,
             "scope": info.get("scope", "item"),
             "threshold": float(info["default_threshold"]),
-            "params": {},
+            "params": dict(info.get("params", {})),
+            "direction": info.get("direction", "higher_is_better"),
+            "critical": bool(info.get("critical", False)),
         }
 
     def get_evaluator_fn(self, evaluator_id: str, version: str | None = None):
@@ -168,6 +182,8 @@ class EvaluatorRegistry:
                 "description": info.get("description", ""),
                 "default_selected": bool(info.get("default_selected", False)),
                 "composed_of": list(info.get("composed_of", [])),
+                "direction": info.get("direction", "higher_is_better"),
+                "critical": bool(info.get("critical", False)),
             })
         return sorted(specs, key=lambda s: s["id"])
 

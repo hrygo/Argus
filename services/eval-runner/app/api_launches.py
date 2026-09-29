@@ -69,6 +69,8 @@ def create_experiment_launch(
             agent_version=payload.agent_version,
             dataset_name=payload.dataset_name,
             dataset_version=payload.dataset_version,
+            environment=payload.environment,
+            baseline_snapshot_id=payload.baseline_snapshot_id,
             name=payload.name,
             idempotency_key=effective_key,
             max_concurrency=payload.max_concurrency,
@@ -77,7 +79,7 @@ def create_experiment_launch(
         return _enrich_launch(launch, orchestrator)
     except ValueError as exc:
         msg = str(exc)
-        if "conflict" in msg.lower():
+        if "conflict" in msg.lower() or msg.startswith("RUNNER_"):
             raise HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=msg) from exc
         elif "not found" in msg.lower():
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=msg) from exc

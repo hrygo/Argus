@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from .config import find_path, settings
@@ -73,12 +73,15 @@ class DatasetResolver:
         dataset_version: str | None = None,
         dataset_client: Any | None = None,
     ) -> dict[str, Any]:
-        if self.source == "langfuse":
+        # A caller-supplied DatasetClient is explicit source selection (used by the legacy
+        # Langfuse route and tests); do not reinterpret it as a seed lookup based on DB mode.
+        if dataset_client is not None:
             return self._resolve_from_langfuse(dataset_name, dataset_version, dataset_client=dataset_client)
-        elif self.source == "seed":
+        if self.source == "langfuse":
+            return self._resolve_from_langfuse(dataset_name, dataset_version)
+        if self.source == "seed":
             return self._resolve_from_seed(dataset_name, dataset_version)
-        else:
-            raise ValueError(f"Unknown dataset source: '{self.source}'. Must be 'langfuse' or 'seed'.")
+        raise ValueError(f"Unknown dataset source: '{self.source}'. Must be 'langfuse' or 'seed'.")
 
     def _resolve_from_langfuse(
         self,
@@ -86,16 +89,14 @@ class DatasetResolver:
         dataset_version: str | None,
         dataset_client: Any | None = None,
     ) -> dict[str, Any]:
+        # Freeze the Langfuse dataset at request time. Never persist an unresolvable "latest" label.
+        version_dt = parse_dataset_version(dataset_version) or datetime.now(UTC)
         if dataset_client is not None:
             dataset = dataset_client
         else:
-            version_dt = parse_dataset_version(dataset_version)
             try:
                 lf = _get_langfuse_client()
-                if version_dt is not None:
-                    dataset = lf.get_dataset(dataset_name, version=version_dt)
-                else:
-                    dataset = lf.get_dataset(dataset_name)
+                dataset = lf.get_dataset(dataset_name, version=version_dt)
             except Exception as exc:
                 raise RuntimeError(f"Failed to fetch dataset '{dataset_name}' from Langfuse: {exc}") from exc
 
@@ -115,7 +116,9 @@ class DatasetResolver:
         snapshot_digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
         dataset_id = str(getattr(dataset, "id", "")) or f"lf-{dataset_name}"
-        effective_version = str(getattr(dataset, "version", None) or dataset_version or "latest")
+        # The SDK records the exact UTC timestamp passed to get_dataset(version=...);
+        # persist the canonical ISO representation rather than str(datetime).
+        effective_version = version_dt.isoformat()
 
 
         return {
@@ -157,7 +160,13 @@ class DatasetResolver:
         snapshot_digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
         dataset_id = seed_data.get("id") or f"seed-{dataset_name}"
-        effective_version = dataset_version or seed_data.get("version") or "seed-v1"
+        seed_version = seed_data.get("version")
+        if dataset_version is not None and dataset_version != seed_version:
+            raise ValueError(
+                f"Dataset version '{dataset_version}' is unavailable in seed source; "
+                f"available version is '{seed_version or 'content-addressed'}'."
+            )
+        effective_version = seed_version or f"sha256:{snapshot_digest}"
 
         return {
             "source": "seed",

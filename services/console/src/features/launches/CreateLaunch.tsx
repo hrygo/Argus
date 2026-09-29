@@ -28,6 +28,7 @@ export const CreateLaunch: React.FC = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [selectedAgentVersion, setSelectedAgentVersion] = useState<string>("");
   const [datasetName, setDatasetName] = useState<string>("banking-agent-regression");
+  const [environment, setEnvironment] = useState<string>("production");
   const [datasetVersionMode, setDatasetVersionMode] = useState<"latest" | "custom">("latest");
   const [customDatasetVersion, setCustomDatasetVersion] = useState<string>("");
   const [evaluatorMode, setEvaluatorMode] = useState<"diagnostic" | "composite">("diagnostic");
@@ -177,6 +178,7 @@ export const CreateLaunch: React.FC = () => {
           agent_version: selectedAgentVersion,
           dataset_name: datasetName.trim(),
           dataset_version: finalDatasetVersion,
+          environment: environment.trim() || "production",
           evaluator_ids: selectedIds,
           max_concurrency: concurrency,
         },
@@ -254,6 +256,22 @@ export const CreateLaunch: React.FC = () => {
               placeholder="例如：release-v1.0-benchmark"
               className="ui-control w-full sm:w-96 text-xs"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5" htmlFor="launch-environment">
+              Environment
+            </label>
+            <input
+              id="launch-environment"
+              type="text"
+              value={environment}
+              onChange={(e) => setEnvironment(e.target.value)}
+              maxLength={64}
+              required
+              placeholder="production"
+              className="ui-control w-full sm:w-96 text-xs"
+            />
+            <p className="mt-1 text-[11px] text-muted-foreground">按 Agent + Environment 自动冻结当前 Baseline。</p>
           </div>
         </div>
 

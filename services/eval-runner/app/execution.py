@@ -22,6 +22,7 @@ from .evaluators import default_evaluator_registry, evaluate_item_quality
 from .executor import AttemptAuthorizationError, RemoteAgentExecutor
 from .manifest import acquire_launch_execution
 from .registry import AgentRegistry, AgentVersionSpec, map_request
+from .runner_identity import current_runner_identity, validate_runner_identity
 from .state_machine import aggregate_launch_status_from_items, assert_terminal_launch_invariants
 
 
@@ -57,6 +58,9 @@ async def _execute_single_item(
     manifest: dict[str, Any],
     lf: Any = None,
 ) -> dict[str, Any]:
+    identity_error = validate_runner_identity(manifest.get("runner"), current_runner_identity())
+    if identity_error:
+        raise ValueError(identity_error)
     item_id = str(item_row.get("id", ""))
     dataset_input = item_row.get("input", {})
     expected_output = item_row.get("expected_output", {})
@@ -167,6 +171,9 @@ async def _execute_single_item(
     eval_error: str | None = None
     scores_dict: dict[str, float] = {}
     agent_output: dict[str, Any] | None = None
+    trace_id: str | None = None
+    trace_url: str | None = None
+    observation_id: str | None = None
 
     try:
         if lf and hasattr(lf, "start_as_current_observation"):
@@ -176,6 +183,19 @@ async def _execute_single_item(
                 input={"agent": f"{spec.agent_id}:{spec.version}", "request": mapped_payload},
                 metadata={"endpoint": spec.endpoint, "execution_mode": "SYNC_HTTP"},
             ) as call_observation:
+                try:
+                    current_trace_id = lf.get_current_trace_id()
+                    trace_id = current_trace_id if isinstance(current_trace_id, str) else None
+                    current_observation_id = lf.get_current_observation_id()
+                    observation_id = current_observation_id if isinstance(current_observation_id, str) else None
+                    if trace_id and hasattr(lf, "get_trace_url"):
+                        current_trace_url = lf.get_trace_url(trace_id=trace_id)
+                        trace_url = current_trace_url if isinstance(current_trace_url, str) else None
+                except Exception:
+                    trace_id = None
+                    trace_url = None
+                    observation_id = None
+
                 call_res = await executor.invoke(
                     mapped_payload,
                     headers,
@@ -248,6 +268,9 @@ async def _execute_single_item(
             "execution_error": execution_error,
             "eval_error": eval_error,
             "scores": scores_dict,
+            "trace_id": trace_id,
+            "langfuse_trace_url": trace_url,
+            "observation_id": observation_id,
             "completed_at": completed_at,
         }
         if last_attempt_id:
@@ -322,6 +345,20 @@ class LaunchExecutionService:
         self.gather_fn = gather_fn or asyncio.gather
 
     async def execute_launch(self, launch_id: str, dataset_client: Any = None) -> LaunchExecutionOutcome:
+        # Reject an incompatible frozen Runner before taking the execution lock or making outbound calls.
+        with self.db_manager.get_session() as session:
+            preflight_launch = session.get(ExperimentLaunchRecord, launch_id)
+            if preflight_launch is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Launch '{launch_id}' not found",
+                )
+            identity_error = validate_runner_identity(
+                preflight_launch.manifest.get("runner"), current_runner_identity()
+            )
+            if identity_error:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=identity_error)
+
         # 1. Acquire atomic execution lock
         acquired = acquire_launch_execution(self.db_manager, launch_id)
         if not acquired:

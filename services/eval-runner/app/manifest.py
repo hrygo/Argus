@@ -14,6 +14,7 @@ from .db import DatabaseManager
 from .db_models import ExperimentLaunchRecord
 from .evaluators import default_evaluator_registry
 from .registry import AgentRegistry
+from .runner_identity import current_runner_identity, validate_runner_identity
 
 
 def compute_payload_digest(payload: dict[str, Any]) -> str:
@@ -46,6 +47,8 @@ class LaunchService:
         agent_version: str,
         dataset_name: str,
         dataset_version: str | None = None,
+        environment: str = "production",
+        baseline_snapshot_id: str | None = None,
         dataset_id: str | None = None,
         name: str | None = None,
         idempotency_key: str | None = None,
@@ -59,6 +62,13 @@ class LaunchService:
         dataset_client: Any | None = None,
         allow_run_scope: bool = False,
     ) -> ExperimentLaunchRecord:
+        from .baselines import normalize_environment
+
+        normalized_environment = normalize_environment(environment)
+        runner_identity = current_runner_identity(runner_version=self.runner_version)
+        identity_error = validate_runner_identity(runner_identity.model_dump(), runner_identity)
+        if identity_error:
+            raise ValueError(f"{identity_error}: runner build identity is unavailable")
         if evaluator_ids is not None and len(evaluator_ids) == 0:
             raise ValueError("evaluator_ids must not be empty. A launch must have at least one evaluator.")
 
@@ -70,6 +80,8 @@ class LaunchService:
             "agent_version": agent_version,
             "dataset_name": dataset_name,
             "dataset_version": dataset_version,
+            "environment": normalized_environment,
+            "baseline_snapshot_id": baseline_snapshot_id,
             "evaluator_ids": eval_list,
             "max_concurrency": max_concurrency,
             "name": name,
@@ -134,8 +146,15 @@ class LaunchService:
 
         # Build 4D Manifest snapshot
         manifest = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "dataset": resolved_snapshot,
+            "comparison": {
+                "environment": normalized_environment,
+                "baseline_snapshot_id": None,
+                "baseline_binding_revision": None,
+                "baseline_resolution": "none",
+                "comparison_policy_version": "comparison-v1",
+            },
             "agent": {
                 "agent_id": ver_rec.agent_id,
                 "version": ver_rec.version,
@@ -155,8 +174,7 @@ class LaunchService:
                 "threshold_rule": "score >= threshold",
             },
             "runner": {
-                "runner_version": self.runner_version,
-                "mapping_engine_version": "sha256-mapping-engine-v1",
+                **runner_identity.model_dump(),
             },
             "execution_policy": {
                 "max_concurrency": effective_concurrency,
@@ -197,6 +215,40 @@ class LaunchService:
                         f"Agent '{agent_id}' 处于不可用状态 '{getattr(agent_rec, 'status', 'not_found')}'，不可创建新的评测任务"
                     )
 
+                from .baselines import validate_baseline_snapshot
+                from .db_models import BaselineBindingRecord, RunResultSnapshotRecord
+
+                comparison = dict(manifest["comparison"])
+                comparison["environment"] = normalized_environment
+                if baseline_snapshot_id:
+                    selected_snapshot = session.get(RunResultSnapshotRecord, baseline_snapshot_id)
+                    if not selected_snapshot:
+                        raise ValueError("Requested baseline result snapshot was not found for this Agent")
+                    selected_launch = session.get(ExperimentLaunchRecord, selected_snapshot.launch_id)
+                    if not selected_launch:
+                        raise ValueError("Requested baseline Launch was not found")
+                    validate_baseline_snapshot(selected_snapshot, selected_launch, agent_id)
+                    comparison.update(
+                        baseline_snapshot_id=selected_snapshot.id,
+                        baseline_binding_revision=None,
+                        baseline_resolution="explicit",
+                    )
+                else:
+                    binding_stmt = select(BaselineBindingRecord).where(
+                        BaselineBindingRecord.agent_id == agent_id,
+                        BaselineBindingRecord.environment == normalized_environment,
+                    )
+                    if self.db_manager.engine.dialect.name == "postgresql":
+                        binding_stmt = binding_stmt.with_for_update()
+                    binding = session.scalars(binding_stmt).first()
+                    if binding and binding.result_snapshot_id:
+                        comparison.update(
+                            baseline_snapshot_id=binding.result_snapshot_id,
+                            baseline_binding_revision=binding.revision,
+                            baseline_resolution="automatic",
+                        )
+                manifest["comparison"] = comparison
+                launch.manifest = manifest
                 session.add(launch)
                 session.flush()
 

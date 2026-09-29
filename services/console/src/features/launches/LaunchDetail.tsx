@@ -23,6 +23,7 @@ import { QualityBadge } from "../../components/QualityBadge";
 import { SyncStatusBadge } from "../../components/SyncStatusBadge";
 import { JsonViewer } from "../../components/JsonViewer";
 import { ItemTable } from "./ItemTable";
+import { ComparisonReport } from "./ComparisonReport";
 import { ACTIVE_LAUNCH_STATUSES, LaunchStatus } from "./LaunchesList";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Button, PageHeader, Panel, buttonClassName } from "../../components/ui/Primitives";
@@ -33,6 +34,12 @@ type ItemExecution = import("../../api/schema").components["schemas"]["Experimen
 interface ManifestData {
   schema_version?: string;
   manifest_version?: string;
+  comparison?: {
+    environment?: string;
+    baseline_snapshot_id?: string | null;
+    baseline_binding_revision?: number | null;
+    baseline_resolution?: string;
+  };
   dataset?: {
     source?: string;
     dataset_name?: string;
@@ -717,6 +724,12 @@ export const LaunchDetail: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ComparisonReport
+        launchId={launch.id}
+        launchStatus={launch.status}
+        environment={manifest.comparison?.environment || "production"}
+      />
 
       {/* Items Execution & Evaluations */}
       {isItemsLoading && <LoadingState message="正在加载用例明细与得分..." />}

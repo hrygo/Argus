@@ -624,6 +624,34 @@ class ExecutionReconciler:
                     updated_count += 1
                     finalized_launch_ids.append(launch.id)
 
+            # Freeze new result revisions and recover terminal launches left without a snapshot
+            # after a process crash. Digest uniqueness keeps this scan idempotent.
+            session.flush()
+            from .db_models import RunResultSnapshotRecord
+            from .result_snapshots import create_result_snapshot
+
+            snapshot_exists = select(RunResultSnapshotRecord.id).where(
+                RunResultSnapshotRecord.launch_id == ExperimentLaunchRecord.id
+            ).exists()
+            snapshot_for_current_completion = select(RunResultSnapshotRecord.id).where(
+                RunResultSnapshotRecord.launch_id == ExperimentLaunchRecord.id,
+                RunResultSnapshotRecord.created_at >= ExperimentLaunchRecord.completed_at,
+            ).exists()
+            terminal_stmt = select(ExperimentLaunchRecord).where(
+                ExperimentLaunchRecord.status.in_(TERMINAL_LAUNCH_STATUSES),
+                (~snapshot_exists) | (~snapshot_for_current_completion),
+            )
+            if self.db_mgr.engine.dialect.name == "postgresql":
+                terminal_stmt = terminal_stmt.with_for_update(skip_locked=True)
+            terminal_launches_for_snapshots = session.scalars(terminal_stmt).all()
+            for terminal_launch in terminal_launches_for_snapshots:
+                try:
+                    with session.begin_nested():
+                        create_result_snapshot(session, terminal_launch)
+                except Exception:
+                    # Keep lifecycle reconciliation healthy; a later cycle retries the materialization.
+                    continue
+
             session.commit()
 
         for lid in finalized_launch_ids:

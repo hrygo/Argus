@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 COMPOSE := docker compose --env-file .env.poc
+ARGUS_BUILD_ID ?= $(shell git rev-parse HEAD)
 
 .PHONY: validate validate-i18n build-langfuse-i18n validate-langfuse-integration up down logs bootstrap demo ps clean
 validate:
@@ -15,7 +16,7 @@ validate-langfuse-integration:
 	./deploy/langfuse/scripts/validate-integration.sh
 
 up:
-	$(COMPOSE) up -d --build
+	ARGUS_BUILD_ID=$(ARGUS_BUILD_ID) $(COMPOSE) up -d --build
 
 down:
 	$(COMPOSE) down

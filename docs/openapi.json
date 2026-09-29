@@ -3,7 +3,7 @@
   "info": {
     "title": "Enterprise Remote Agent Eval Runner",
     "description": "Enterprise Agent Evaluation Control Plane with Persistent Registry, Version Snapshots, and Zero-SDK Agents.",
-    "version": "0.2.0"
+    "version": "0.1.0"
   },
   "paths": {
     "/api/v1/agents": {
@@ -1222,6 +1222,341 @@
         }
       }
     },
+    "/api/v1/agents/{agent_id}/baselines": {
+      "get": {
+        "tags": [
+          "Baselines"
+        ],
+        "summary": "Get the current Agent/environment Baseline",
+        "operationId": "get_agent_baseline_api_v1_agents__agent_id__baselines_get",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "production",
+              "title": "Environment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaselineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Baselines"
+        ],
+        "summary": "Bind a completed result as the current Baseline",
+        "operationId": "put_agent_baseline_api_v1_agents__agent_id__baselines_post",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaselineCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaselineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiment-launches/{launch_id}/summary": {
+      "get": {
+        "tags": [
+          "Evaluation Results"
+        ],
+        "summary": "Get a stable run-level evaluation summary",
+        "operationId": "get_run_summary_api_v1_experiment_launches__launch_id__summary_get",
+        "parameters": [
+          {
+            "name": "launch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Launch Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiment-launches/{launch_id}/comparison": {
+      "get": {
+        "tags": [
+          "Evaluation Results"
+        ],
+        "summary": "Compare a Candidate against its frozen Baseline",
+        "operationId": "get_launch_comparison_api_v1_experiment_launches__launch_id__comparison_get",
+        "parameters": [
+          {
+            "name": "launch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Launch Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "classification",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Classification"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiment-launches/{launch_id}/comparison/case": {
+      "get": {
+        "tags": [
+          "Evaluation Results"
+        ],
+        "summary": "Read frozen baseline and candidate outputs for one comparison case",
+        "operationId": "get_comparison_case_api_v1_experiment_launches__launch_id__comparison_case_get",
+        "parameters": [
+          {
+            "name": "launch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Launch Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "dataset_item_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Dataset Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonCaseOutputResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/info": {
       "get": {
         "tags": [
@@ -1945,6 +2280,111 @@
         ],
         "title": "AgentVersionResponse"
       },
+      "BaselineCreateRequest": {
+        "properties": {
+          "environment": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Environment"
+          },
+          "result_snapshot_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Result Snapshot Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "environment",
+          "result_snapshot_id",
+          "expected_revision"
+        ],
+        "title": "BaselineCreateRequest"
+      },
+      "BaselineResponse": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "result_snapshot_id": {
+            "type": "string",
+            "title": "Result Snapshot Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "launch_id": {
+            "type": "string",
+            "title": "Launch Id"
+          },
+          "agent_version": {
+            "type": "string",
+            "title": "Agent Version"
+          },
+          "dataset_name": {
+            "type": "string",
+            "title": "Dataset Name"
+          },
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id",
+          "environment",
+          "result_snapshot_id",
+          "revision",
+          "updated_at",
+          "launch_id",
+          "agent_version",
+          "dataset_name",
+          "summary"
+        ],
+        "title": "BaselineResponse"
+      },
       "BootstrapResult": {
         "properties": {
           "dataset_name": {
@@ -1973,6 +2413,144 @@
           "items_upserted"
         ],
         "title": "BootstrapResult"
+      },
+      "ComparisonCaseOutputResponse": {
+        "properties": {
+          "launch_id": {
+            "type": "string",
+            "title": "Launch Id"
+          },
+          "candidate_snapshot_id": {
+            "type": "string",
+            "title": "Candidate Snapshot Id"
+          },
+          "baseline_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Snapshot Id"
+          },
+          "dataset_item_id": {
+            "type": "string",
+            "title": "Dataset Item Id"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/OutputSideResponse"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/OutputSideResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "launch_id",
+          "candidate_snapshot_id",
+          "dataset_item_id",
+          "classification",
+          "baseline",
+          "candidate"
+        ],
+        "title": "ComparisonCaseOutputResponse"
+      },
+      "ComparisonResponse": {
+        "properties": {
+          "launch_id": {
+            "type": "string",
+            "title": "Launch Id"
+          },
+          "candidate_snapshot_id": {
+            "type": "string",
+            "title": "Candidate Snapshot Id"
+          },
+          "baseline_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Snapshot Id"
+          },
+          "baseline_binding_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Binding Revision"
+          },
+          "versions": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Versions"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "classification_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Classification Counts"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "launch_id",
+          "candidate_snapshot_id",
+          "versions",
+          "summary",
+          "classification_counts",
+          "items"
+        ],
+        "title": "ComparisonResponse"
       },
       "DomainErrorResponse": {
         "properties": {
@@ -2058,6 +2636,16 @@
             },
             "type": "array",
             "title": "Composed Of"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "default": "higher_is_better"
+          },
+          "critical": {
+            "type": "boolean",
+            "title": "Critical",
+            "default": false
           }
         },
         "type": "object",
@@ -2406,6 +2994,26 @@
               }
             ],
             "title": "Dataset Version"
+          },
+          "environment": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Environment",
+            "default": "production"
+          },
+          "baseline_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Snapshot Id"
           },
           "evaluator_ids": {
             "items": {
@@ -2906,6 +3514,72 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "OutputSideResponse": {
+        "properties": {
+          "output_status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "NO_REFERENCE",
+              "NOT_FOUND",
+              "FETCH_FAILED"
+            ],
+            "title": "Output Status"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          },
+          "scores": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Scores",
+            "default": {}
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output_status"
+        ],
+        "title": "OutputSideResponse"
+      },
       "RetryFailedRequest": {
         "properties": {
           "force": {
@@ -2917,6 +3591,57 @@
         },
         "type": "object",
         "title": "RetryFailedRequest"
+      },
+      "RunSummaryResponse": {
+        "properties": {
+          "launch_id": {
+            "type": "string",
+            "title": "Launch Id"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "manifest_digest": {
+            "type": "string",
+            "title": "Manifest Digest"
+          },
+          "versions": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Versions"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "langfuse_score_sync_status": {
+            "type": "string",
+            "title": "Langfuse Score Sync Status",
+            "default": "PENDING"
+          }
+        },
+        "type": "object",
+        "required": [
+          "launch_id",
+          "snapshot_id",
+          "revision",
+          "created_at",
+          "manifest_digest",
+          "versions",
+          "summary"
+        ],
+        "title": "RunSummaryResponse"
       },
       "SystemInfoResponse": {
         "properties": {

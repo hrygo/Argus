@@ -22,6 +22,7 @@ from .limiter import DistributedAgentLimiter
 from .metrics import runtime_metrics
 from .queue import QueueAdapter
 from .registry import AgentVersionSpec, map_request
+from .runner_identity import RunnerIdentity, current_runner_identity, validate_runner_identity
 
 try:
     from opentelemetry.propagate import inject
@@ -39,11 +40,13 @@ class ExecutionWorker:
         queue: QueueAdapter,
         limiter: DistributedAgentLimiter,
         worker_id: str | None = None,
+        runner_identity: RunnerIdentity | None = None,
     ):
         self.db_mgr = db_mgr
         self.queue = queue
         self.limiter = limiter
         self.worker_id = worker_id or f"worker-{uuid.uuid4().hex[:8]}"
+        self.runner_identity = runner_identity or current_runner_identity()
         self.local_concurrency = asyncio.Semaphore(10)
         self.heartbeat_interval = 5.0
 
@@ -237,6 +240,7 @@ class ExecutionWorker:
         eval_error: str | None = None,
         retry_available_at: datetime | None = None,
         trace_id: str | None = None,
+        trace_url: str | None = None,
         observation_id: str | None = None,
         launch_id: str | None = None,
         dataset_item_id: str | None = None,
@@ -297,6 +301,7 @@ class ExecutionWorker:
             item.eval_error = eval_error
             item.available_at = retry_available_at
             item.trace_id = trace_id
+            item.langfuse_trace_url = trace_url
             item.observation_id = observation_id
             item.lease_owner = None
             item.lease_token = None
@@ -421,6 +426,21 @@ class ExecutionWorker:
                 dataset_input = matched.get("input", {})
                 expected_output = matched.get("expected_output", {})
 
+                identity_error = validate_runner_identity(manifest.get("runner"), self.runner_identity)
+                if identity_error:
+                    # Fence the claimed item as a pre-execution failure. No Attempt or Agent call is created.
+                    finalized = self.finalize_item(
+                        item_id=item_id,
+                        generation=generation,
+                        lease_token=token,
+                        status="FAILED",
+                        eval_status="skipped",
+                        quality_conclusion="unknown",
+                        execution_error=identity_error,
+                    )
+                    self.queue.ack(message_id)
+                    return finalized
+
                 # If launch is still QUEUED, transition to RUNNING atomically
                 if launch_rec.status == "QUEUED":
                     launch_rec.status = "RUNNING"
@@ -529,6 +549,7 @@ class ExecutionWorker:
 
             lf = get_langfuse_client_safe()
             trace_id: str | None = None
+            trace_url: str | None = None
             obs_id: str | None = None
 
             # Double-layered observation or OpenTelemetry
@@ -646,6 +667,13 @@ class ExecutionWorker:
                     if lease_lost.is_set():
                         return False
 
+                    if lf and trace_id and hasattr(lf, "get_trace_url"):
+                        try:
+                            candidate_trace_url = lf.get_trace_url(trace_id=trace_id)
+                            trace_url = candidate_trace_url if isinstance(candidate_trace_url, str) else None
+                        except Exception:
+                            trace_url = None
+
                     is_non_idem_read_timeout = (
                         not spec.is_idempotent and inv_res.error_category == "READ_TIMEOUT"
                     )
@@ -730,6 +758,7 @@ class ExecutionWorker:
                             scores=scores_dict,
                             eval_error=eval_error,
                             trace_id=trace_id,
+                            trace_url=trace_url,
                             observation_id=obs_id,
                             launch_id=launch_id,
                             dataset_item_id=claim_info["dataset_item_id"],
@@ -755,6 +784,7 @@ class ExecutionWorker:
                                 attempt_updates=att_updates,
                                 execution_error=inv_res.error_message,
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],
@@ -774,6 +804,7 @@ class ExecutionWorker:
                                 attempt_updates=att_updates,
                                 execution_error=f"AMBIGUOUS_OUTCOME: {inv_res.error_message}",
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],
@@ -795,6 +826,7 @@ class ExecutionWorker:
                                 execution_error=inv_res.error_message,
                                 retry_available_at=datetime.now(UTC) + timedelta(seconds=delay_sec),
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],
@@ -815,6 +847,7 @@ class ExecutionWorker:
                                 attempt_updates=att_updates,
                                 execution_error=inv_res.error_message,
                                 trace_id=trace_id,
+                                trace_url=trace_url,
                                 observation_id=obs_id,
                                 launch_id=launch_id,
                                 dataset_item_id=claim_info["dataset_item_id"],

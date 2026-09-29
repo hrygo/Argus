@@ -53,7 +53,7 @@ test.describe("Real API Acceptance E2E (Zero Mock)", () => {
     await expect(page.getByTestId("langfuse-sync-badge")).toBeVisible();
 
     // 6. Verify 4-Dimension Frozen Manifest rendered from real backend database
-    await expect(page.getByTestId("manifest-schema-version")).toContainText("Schema v1.0");
+    await expect(page.getByTestId("manifest-schema-version")).toContainText("Schema v1.1");
 
     // Dimension 1: Agent snapshot (banking-agent)
     await expect(page.getByText("banking-agent").first()).toBeVisible();

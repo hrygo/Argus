@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
+export ARGUS_BUILD_ID="${ARGUS_BUILD_ID:-$(git rev-parse HEAD)}"
 
 ARTIFACT_DIR="${ARTIFACT_DIR:-$ROOT/artifacts/e2e}"
 mkdir -p "$ARTIFACT_DIR"

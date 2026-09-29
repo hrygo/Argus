@@ -14,6 +14,7 @@ from .db_models import (
 )
 from .limiter import DistributedAgentLimiter
 from .queue import QueueAdapter
+from .runner_identity import current_runner_identity, validate_runner_identity
 from .state_machine import (
     DomainConflictError,
     calculate_launch_progress,
@@ -35,6 +36,7 @@ class LaunchOrchestrator:
         self.db_mgr = db_mgr
         self.queue = queue
         self.limiter = limiter
+        self.runner_identity = current_runner_identity()
 
     def create_launch(
         self,
@@ -50,6 +52,8 @@ class LaunchOrchestrator:
         launch_id = str(uuid.uuid4())
         agent_version_id = manifest.get("agent", {}).get("agent_version_id") or f"{agent_id}-{agent_version}"
 
+        manifest = dict(manifest)
+        manifest.setdefault("runner", self.runner_identity.model_dump())
         items_seed = manifest.get("dataset", {}).get("items", [])
 
         with self.db_mgr.get_session() as session:
@@ -91,12 +95,18 @@ class LaunchOrchestrator:
             session.refresh(launch)
             return launch
 
+    def _assert_runner_identity(self, launch: ExperimentLaunchRecord) -> None:
+        reason = validate_runner_identity(launch.manifest.get("runner"), self.runner_identity)
+        if reason:
+            raise DomainConflictError(reason)
+
     def start_launch(self, launch_id: str) -> ExperimentLaunchRecord:
         """Transitions PENDING launch and its items to QUEUED, and dispatches to queue."""
         with self.db_mgr.get_session() as session:
             launch = session.get(ExperimentLaunchRecord, launch_id)
             if not launch:
                 raise ValueError(f"Launch '{launch_id}' not found")
+            self._assert_runner_identity(launch)
 
             transition_launch_status(launch.status, "QUEUED")
             launch.status = "QUEUED"
@@ -201,6 +211,7 @@ class LaunchOrchestrator:
             launch = session.scalars(launch_stmt).first()
             if not launch:
                 raise ValueError(f"Launch '{launch_id}' not found")
+            self._assert_runner_identity(launch)
 
             # Check non-idempotent ambiguous outcome protection across all attempts of this launch
             ambiguous_attempts = session.scalars(
@@ -295,6 +306,7 @@ class LaunchOrchestrator:
             launch = session.scalars(launch_stmt).first()
             if not launch:
                 raise ValueError(f"Launch '{launch_id}' not found")
+            self._assert_runner_identity(launch)
 
             # Query item counts to enforce single common lifecycle guard
             counts_res = session.execute(

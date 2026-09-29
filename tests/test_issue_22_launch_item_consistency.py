@@ -82,8 +82,19 @@ def test_legacy_experiments_run_persists_items_and_attempts(client):
 
     mock_dataset.run_experiment.side_effect = fake_run_experiment
     mock_dataset.id = "ds-issue-22"
+    from types import SimpleNamespace
+
+    from app.dataset import DatasetResolver
+
+    mock_dataset.items = [
+        SimpleNamespace(**item)
+        for item in DatasetResolver(source="seed").resolve("banking-agent-regression")["items"]
+    ]
     mock_lf = MagicMock()
     mock_lf.get_dataset.return_value = mock_dataset
+    mock_lf.get_current_trace_id.return_value = "trace-issue-22"
+    mock_lf.get_current_observation_id.return_value = "observation-issue-22"
+    mock_lf.get_trace_url.return_value = "https://langfuse.example/trace/trace-issue-22"
 
     with patch("app.main._wait_for_langfuse"), \
          patch("app.main._client", return_value=mock_lf), \
@@ -133,6 +144,17 @@ def test_legacy_experiments_run_persists_items_and_attempts(client):
     assert progress["completed"] == 6
     assert progress["pending"] == 0
     assert progress["percentage"] == 100.0
+
+    from app.main import db_manager
+
+    with db_manager.get_session() as session:
+        persisted_items = session.query(ExperimentItemExecutionRecord).filter_by(launch_id=launch_id).all()
+        assert all(item.trace_id == "trace-issue-22" for item in persisted_items)
+        assert all(item.observation_id == "observation-issue-22" for item in persisted_items)
+        assert all(
+            item.langfuse_trace_url == "https://langfuse.example/trace/trace-issue-22"
+            for item in persisted_items
+        )
 
 
 def test_invariant_1_terminal_launch_disallows_active_items_defensive_guard():
