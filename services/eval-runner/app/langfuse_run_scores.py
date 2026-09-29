@@ -105,7 +105,16 @@ class LangfuseRunScoreSyncer:
             session.commit()
         return claimed
 
-    def _finish(self, task_id: str, token: str, *, status: str, error: str | None = None, retry: bool = False) -> bool:
+    def _finish(
+        self,
+        task_id: str,
+        token: str,
+        *,
+        status: str,
+        error: str | None = None,
+        retry: bool = False,
+        defer: bool = False,
+    ) -> bool:
         is_pg = self.db_mgr.engine.dialect.name == "postgresql"
         with self.db_mgr.get_session() as session:
             now = session.scalar(select(func.clock_timestamp())) if is_pg else datetime.now(UTC)
@@ -124,7 +133,12 @@ class LangfuseRunScoreSyncer:
             task.lease_expires_at = None
             task.last_error = error
             task.updated_at = now
-            if retry and task.attempts < self.max_attempts:
+            if defer:
+                # Dependency polling is not a failed publication attempt.
+                task.attempts = max(0, task.attempts - 1)
+                task.status = "PENDING"
+                task.next_retry_at = now + timedelta(seconds=2)
+            elif retry and task.attempts < self.max_attempts:
                 task.status = "PENDING"
                 task.next_retry_at = now + timedelta(seconds=min(60, 2 ** task.attempts) + random.uniform(0.1, 1.0))
             elif retry:
@@ -137,6 +151,12 @@ class LangfuseRunScoreSyncer:
     def _dataset_run_id(self, launch_id: str) -> tuple[str | None, bool, bool]:
         """Return the linked DatasetRun id, whether item sync is terminal, and whether it failed."""
         with self.db_mgr.get_session() as session:
+            launch = session.get(ExperimentLaunchRecord, launch_id)
+            persisted_run_id = (
+                launch.langfuse_experiment_id
+                if launch and launch.langfuse_sync_status == "SYNCED"
+                else None
+            )
             items = session.scalars(select(ExperimentItemExecutionRecord).where(
                 ExperimentItemExecutionRecord.launch_id == launch_id
             )).all()
@@ -157,7 +177,16 @@ class LangfuseRunScoreSyncer:
             raise ValueError(f"Conflicting DatasetRun IDs for current Launch generation {launch_id}")
         all_terminal = all(task.status in {"SYNCED", "SKIPPED", "FAILED"} for task in current_tasks)
         has_failed = any(task.status == "FAILED" for task in current_tasks)
-        return (next(iter(run_ids)) if run_ids else None), all_terminal, has_failed
+        dataset_run_id = next(iter(run_ids)) if run_ids else None
+        if (
+            dataset_run_id is None
+            and not tasks
+            and persisted_run_id
+        ):
+            # LaunchExecutionService's synchronous Langfuse path persists the DatasetRun
+            # directly and does not create item outbox tasks.
+            dataset_run_id = persisted_run_id
+        return dataset_run_id, all_terminal, has_failed
 
     def _process_one(self, task_id: str, token: str, snapshot_id: str, client: Any | None, client_error: str | None) -> bool:
         missing_data = False
@@ -189,7 +218,13 @@ class LangfuseRunScoreSyncer:
                     return self._finish(task_id, token, status="FAILED", error="Item Langfuse synchronization failed before DatasetRun creation")
                 if all_item_sync_terminal:
                     return self._finish(task_id, token, status="SKIPPED", error="No linked Langfuse DatasetRun was produced")
-                return self._finish(task_id, token, status="PENDING", error="Waiting for item DatasetRun links", retry=True)
+                return self._finish(
+                    task_id,
+                    token,
+                    status="PENDING",
+                    error="Waiting for item DatasetRun links",
+                    defer=True,
+                )
 
             for metric, value in scores.items():
                 if isinstance(value, bool) or not isinstance(value, (int, float)):
