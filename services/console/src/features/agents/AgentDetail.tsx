@@ -10,6 +10,7 @@ import { DeleteAgentModal } from "./DeleteAgentModal";
 import { EmptyState, ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
 import { Button, PageHeader, Panel } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
 
 export const AgentDetail: React.FC = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -17,6 +18,7 @@ export const AgentDetail: React.FC = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [versionToArchive, setVersionToArchive] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: agent, isLoading: isAgentLoading, error: agentError, refetch: refetchAgent } = useQuery({
@@ -247,11 +249,7 @@ export const AgentDetail: React.FC = () => {
                         {ver.is_active && (
                           <button
                             type="button"
-                            onClick={() => {
-                              if (confirm(`确认归档版本 ${ver.version} 吗？归档后将不能用于新评测。`)) {
-                                archiveMutation.mutate(ver.version);
-                              }
-                            }}
+                            onClick={() => setVersionToArchive(ver.version)}
                             disabled={archiveMutation.isPending}
                             // SC 2.5.8 Target Size (Minimum): the bare text link
                             // was 18px tall, below the 24px floor.
@@ -291,6 +289,46 @@ export const AgentDetail: React.FC = () => {
         onClose={() => setIsDeleteOpen(false)}
         onSuccess={() => navigate("/agents")}
       />
+
+      <Modal
+        open={versionToArchive !== null}
+        onClose={() => setVersionToArchive(null)}
+        title="归档版本"
+        tone="danger"
+        // A submitted archive must not be abandoned by a stray click.
+        dismissable={!archiveMutation.isPending}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              onClick={() => setVersionToArchive(null)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              className="text-xs"
+              disabled={archiveMutation.isPending}
+              onClick={() => {
+                if (versionToArchive === null) return;
+                archiveMutation.mutate(versionToArchive, {
+                  onSuccess: () => setVersionToArchive(null),
+                });
+              }}
+            >
+              {archiveMutation.isPending ? "正在归档..." : "确认归档"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-foreground">
+          确认归档版本{" "}
+          <span className="font-semibold">{versionToArchive}</span> 吗？归档后该版本将不能用于新评测。
+        </p>
+      </Modal>
     </div>
   );
 };
