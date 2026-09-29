@@ -8,11 +8,15 @@ export const typography = {
     mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
   },
   fontSizes: {
-    "2xs": "0.625rem", // 10px - Badges, tiny captions
+    // Argus additions — steps Tailwind's default scale does not provide.
+    micro: "0.6875rem", // 11px - Table headers, dense badges
+    "2xs": "0.625rem",  // 10px - Micro captions
+    // Tailwind-backed steps. Redefining these in @theme would silently
+    // rescale every existing `text-*` usage, so they stay as Tailwind ships
+    // them and are recorded here for documentation only.
     xs: "0.75rem",    // 12px - Table dense content, metadata
-    sm: "0.8125rem",  // 13px - Standard controls, secondary text
-    base: "0.875rem", // 14px - Primary body, default button text
-    md: "1rem",       // 16px - Emphasized body, card titles
+    sm: "0.875rem",   // 14px - Standard controls, secondary text
+    base: "1rem",     // 16px - Emphasised body, card titles
     lg: "1.125rem",   // 18px - Section headers, page titles
     xl: "1.25rem",    // 20px - Main titles
     "2xl": "1.5rem",  // 24px - Large headlines

@@ -25,10 +25,32 @@ export const spacing = {
 export const layoutDimensions = {
   sidebarWidth: "208px",
   topHeaderHeight: "56px",
+  contentMaxWidth: "1600px",
   tableRowHeightDense: "36px",
   tableRowHeightNormal: "44px",
   controlHeightSm: "32px",
   controlHeightMd: "36px",
   modalMaxWidth: "560px",
   drawerWidth: "480px",
+  overlayPanelMaxHeight: "85vh",
+  codePanelMaxHeight: "80vh",
+} as const;
+
+/**
+ * Table column width scale
+ *
+ * High-density Launch and Agent tables need stable, shared column widths
+ * so that rows stay aligned and never reflow between views. These are
+ * expressed as named steps rather than per-table arbitrary values.
+ */
+export const columnWidths = {
+  "3xs": "84px",
+  "2xs": "118px",
+  xs: "136px",
+  sm: "144px",
+  md: "155px",
+  lg: "170px",
+  xl: "180px",
+  "2xl": "1132px",
+  "3xl": "1200px",
 } as const;

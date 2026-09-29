@@ -58,20 +58,35 @@ export const globalColors = {
     50: "#fffbeb",
     100: "#fef3c7",
     200: "#fde68a",
+    400: "#fbbf24",
     500: "#f59e0b",
     600: "#d97706",
     700: "#b45309",
     800: "#92400e",
+    900: "#78350f",
   },
   // Status / Gate: Info (Running, Orchestrating, In Progress)
   sky: {
     50: "#f0f9ff",
     100: "#e0f2fe",
     200: "#bae6fd",
+    400: "#38bdf8",
     500: "#0ea5e9",
     600: "#0284c7",
     700: "#0369a1",
     800: "#075985",
+  },
+  // Status / Gate: Retry (Waiting for retry, backoff scheduled)
+  yellow: {
+    50: "#fefce8",
+    100: "#fef9c3",
+    200: "#fef08a",
+    400: "#facc15",
+    500: "#eab308",
+    600: "#ca8a04",
+    700: "#a16207",
+    800: "#854d0e",
+    900: "#713f12",
   },
 } as const;
 
@@ -102,17 +117,92 @@ export const semanticColors = {
   primaryBorder: globalColors.indigo[200],
   focus: globalColors.indigo[500],
 
-  // Quality & Gate Semantics (Domain specific to Argus)
-  statusPass: globalColors.emerald[600],
-  statusPassSubtle: globalColors.emerald[50],
-  statusPassBorder: globalColors.emerald[200],
-  statusFail: globalColors.rose[600],
-  statusFailSubtle: globalColors.rose[50],
-  statusFailBorder: globalColors.rose[200],
-  statusWarn: globalColors.amber[600],
-  statusWarnSubtle: globalColors.amber[50],
-  statusWarnBorder: globalColors.amber[200],
-  statusInfo: globalColors.sky[600],
-  statusInfoSubtle: globalColors.sky[50],
-  statusInfoBorder: globalColors.sky[200],
+  // Overlays & Scrim (Modal / Drawer backdrop)
+  overlay: globalColors.slate[900],
+
+  // Dark Code Surface (JSON viewer, code blocks)
+  codeSurface: globalColors.slate[900],
+  codeHeader: globalColors.slate[800],
+  codeBorder: globalColors.slate[700],
+  codeText: globalColors.slate[100],
+  codeTextMuted: globalColors.slate[300],
+  codeTextDim: globalColors.slate[400],
+  codeTextHover: globalColors.slate[200],
 } as const;
+
+/**
+ * Execution Status Scale
+ *
+ * Argus models Launch Item execution outcomes on a seven-step scale.
+ * Each family exposes a fixed set of roles so that any state can be
+ * rendered consistently across badges, progress meters, tables and
+ * callouts without reaching for a raw palette.
+ */
+export const statusScale = {
+  queued: {
+    subtle: globalColors.indigo[50],
+    border: globalColors.indigo[200],
+    text: globalColors.indigo[700],
+    textStrong: globalColors.indigo[800],
+    solid: globalColors.indigo[500],
+    solidHover: globalColors.indigo[600],
+    onSolid: "#ffffff",
+  },
+  running: {
+    subtle: globalColors.sky[50],
+    border: globalColors.sky[200],
+    text: globalColors.sky[700],
+    textStrong: globalColors.sky[800],
+    solid: globalColors.sky[400],
+    solidHover: globalColors.sky[600],
+    onSolid: "#ffffff",
+  },
+  pass: {
+    subtle: globalColors.emerald[50],
+    border: globalColors.emerald[200],
+    text: globalColors.emerald[700],
+    textStrong: globalColors.emerald[800],
+    solid: globalColors.emerald[500],
+    solidHover: globalColors.emerald[600],
+    onSolid: "#ffffff",
+  },
+  fail: {
+    subtle: globalColors.rose[50],
+    border: globalColors.rose[200],
+    text: globalColors.rose[700],
+    textStrong: globalColors.rose[800],
+    solid: globalColors.rose[500],
+    solidHover: globalColors.rose[700],
+    onSolid: "#ffffff",
+  },
+  timeout: {
+    subtle: globalColors.amber[50],
+    border: globalColors.amber[200],
+    text: globalColors.amber[700],
+    textStrong: globalColors.amber[800],
+    solid: globalColors.amber[400],
+    solidHover: globalColors.amber[600],
+    onSolid: globalColors.amber[900],
+  },
+  retry: {
+    subtle: globalColors.yellow[50],
+    border: globalColors.yellow[200],
+    text: globalColors.yellow[700],
+    textStrong: globalColors.yellow[800],
+    solid: globalColors.yellow[400],
+    solidHover: globalColors.yellow[600],
+    onSolid: globalColors.yellow[900],
+  },
+  cancelled: {
+    subtle: semanticColors.surfaceMuted,
+    border: semanticColors.border,
+    text: globalColors.slate[700],
+    textStrong: globalColors.slate[900],
+    solid: globalColors.slate[400],
+    solidHover: globalColors.slate[500],
+    onSolid: "#ffffff",
+  },
+} as const;
+
+export type StatusFamily = keyof typeof statusScale;
+export type StatusRole = keyof (typeof statusScale)["pass"];
