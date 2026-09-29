@@ -37,6 +37,29 @@ export const layoutDimensions = {
 } as const;
 
 /**
+ * Focus indication geometry — WCAG 2.2 SC 2.4.11 Focus Appearance (AA).
+ *
+ * The criterion asks for a perimeter at least 2 CSS px thick with a 3:1
+ * contrast against what surrounds it. `focusRing.color` is checked for
+ * contrast in `contrast.ts`; the two values here cover the geometry half.
+ */
+export const focusRing = {
+  width: "2px",
+  offset: "2px",
+} as const;
+
+/**
+ * Interactive target floor — WCAG 2.2 SC 2.5.8 Target Size (Minimum), AA.
+ *
+ * Every control height in `layoutDimensions` is asserted against this value
+ * by `__tests__/a11y.test.ts`, so a denser table or a tighter button cannot
+ * quietly drop below the 24 CSS px floor.
+ */
+export const targetSize = {
+  minimum: "24px",
+} as const;
+
+/**
  * Table column width scale
  *
  * High-density Launch and Agent tables need stable, shared column widths

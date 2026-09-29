@@ -35,6 +35,10 @@
   --argus-header-height: 56px;
   --argus-content-max-width: 1600px;
 
+  /* Focus indication — WCAG 2.2 SC 2.4.11 Focus Appearance */
+  --argus-focus-ring-width: 2px;
+  --argus-focus-ring-offset: 2px;
+
   /* Overlays & Scrim */
   --argus-color-overlay: #0f172a;
 
