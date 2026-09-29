@@ -332,6 +332,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/experiment-launches/{launch_id}/comparison/case": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read frozen baseline and candidate outputs for one comparison case */
+        get: operations["get_comparison_case_api_v1_experiment_launches__launch_id__comparison_case_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/info": {
         parameters: {
             query?: never;
@@ -786,6 +803,23 @@ export interface components {
             /** Items Upserted */
             items_upserted: number;
         };
+        /** ComparisonCaseOutputResponse */
+        ComparisonCaseOutputResponse: {
+            /** Launch Id */
+            launch_id: string;
+            /** Candidate Snapshot Id */
+            candidate_snapshot_id: string;
+            /** Baseline Snapshot Id */
+            baseline_snapshot_id?: string | null;
+            /** Dataset Item Id */
+            dataset_item_id: string;
+            /** Classification */
+            classification: string;
+            /** Reason */
+            reason?: string | null;
+            baseline: components["schemas"]["OutputSideResponse"];
+            candidate: components["schemas"]["OutputSideResponse"];
+        };
         /** ComparisonResponse */
         ComparisonResponse: {
             /** Launch Id */
@@ -1193,6 +1227,37 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** OutputSideResponse */
+        OutputSideResponse: {
+            /**
+             * Output Status
+             * @enum {string}
+             */
+            output_status: "AVAILABLE" | "NO_REFERENCE" | "NOT_FOUND" | "FETCH_FAILED";
+            /** Output */
+            output?: unknown | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Retryable
+             * @default false
+             */
+            retryable: boolean;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+            /**
+             * Scores
+             * @default {}
+             */
+            scores: {
+                [key: string]: unknown;
+            };
+            /** Trace Url */
+            trace_url?: string | null;
         };
         /** RetryFailedRequest */
         RetryFailedRequest: {
@@ -2059,7 +2124,9 @@ export interface operations {
     };
     get_run_summary_api_v1_experiment_launches__launch_id__summary_get: {
         parameters: {
-            query?: never;
+            query?: {
+                snapshot_id?: string | null;
+            };
             header?: never;
             path: {
                 launch_id: string;
@@ -2091,6 +2158,7 @@ export interface operations {
     get_launch_comparison_api_v1_experiment_launches__launch_id__comparison_get: {
         parameters: {
             query?: {
+                snapshot_id?: string | null;
                 classification?: string | null;
                 limit?: number;
                 cursor?: number;
@@ -2110,6 +2178,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ComparisonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_comparison_case_api_v1_experiment_launches__launch_id__comparison_case_get: {
+        parameters: {
+            query: {
+                snapshot_id: string;
+                dataset_item_id: string;
+            };
+            header?: never;
+            path: {
+                launch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonCaseOutputResponse"];
                 };
             };
             /** @description Validation Error */

@@ -150,7 +150,10 @@ jobs:
       - name: Build application images
         run: |
           docker build -t argus-demo-agent:ci services/demo-agent
-          docker build -t argus-eval-runner:ci services/eval-runner
+          docker build \
+            --build-arg ARGUS_BUILD_ID="${GITHUB_SHA}" \
+            --build-arg RUNNER_VERSION=0.1.0 \
+            -t argus-eval-runner:ci services/eval-runner
           docker build -t argus-console:ci services/console
 
   console:

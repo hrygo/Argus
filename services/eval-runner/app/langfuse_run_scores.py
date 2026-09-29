@@ -22,6 +22,40 @@ from .db_models import (
 logger = logging.getLogger("argus.langfuse_run_scores")
 
 
+class RunScorePublishError(RuntimeError):
+    """A score write was not explicitly acknowledged by Langfuse."""
+
+
+def _http_status_code(error: Exception) -> int | None:
+    status_code = getattr(error, "status_code", None)
+    if status_code is None:
+        status_code = getattr(getattr(error, "response", None), "status_code", None)
+    return status_code if isinstance(status_code, int) else None
+
+
+def publish_run_score(
+    client: Any,
+    *,
+    score_id: str,
+    run_id: str,
+    name: str,
+    value: float,
+    metadata: dict[str, Any],
+    timeout_seconds: int = 5,
+) -> None:
+    response = client.api.scores.create(
+        id=score_id,
+        dataset_run_id=run_id,
+        name=name,
+        value=value,
+        data_type="NUMERIC",
+        metadata=metadata,
+        request_options={"timeout_in_seconds": timeout_seconds, "max_retries": 0},
+    )
+    if getattr(response, "id", None) != score_id:
+        raise RunScorePublishError("SCORE_ACK_MISMATCH")
+
+
 class LangfuseRunScoreSyncer:
     """Publishes immutable run metrics through a separately leased transactional outbox."""
 
@@ -46,10 +80,12 @@ class LangfuseRunScoreSyncer:
             return None, str(exc)
         if client is None:
             return None, None
-        if not hasattr(client, "create_score") or not hasattr(client, "flush"):
-            return None, "Langfuse client does not expose create_score/flush"
-        if getattr(client, "_resources", True) is None or getattr(client, "_tracing_enabled", True) is False:
-            return None, None
+        api = getattr(client, "api", None)
+        scores = getattr(api, "scores", None)
+        if scores is None or not callable(getattr(scores, "create", None)):
+            return None, "Langfuse client does not expose synchronous api.scores.create"
+        if getattr(client, "_resources", True) is None:
+            return None, "Langfuse client is not initialized"
         return client, None
 
     def _claim(self, limit: int) -> list[tuple[str, str, str]]:
@@ -148,6 +184,30 @@ class LangfuseRunScoreSyncer:
             session.commit()
             return True
 
+
+    def _renew_lease(self, task_id: str, token: str) -> bool:
+        is_pg = self.db_mgr.engine.dialect.name == "postgresql"
+        with self.db_mgr.get_session() as session:
+            now = session.scalar(select(func.clock_timestamp())) if is_pg else datetime.now(UTC)
+            if now.tzinfo is None:
+                now = now.replace(tzinfo=UTC)
+            stmt = select(LangfuseRunScoreTaskRecord).where(
+                LangfuseRunScoreTaskRecord.id == task_id,
+                LangfuseRunScoreTaskRecord.claim_token == token,
+                LangfuseRunScoreTaskRecord.status == "PROCESSING",
+                LangfuseRunScoreTaskRecord.lease_expires_at > now,
+            )
+            if is_pg:
+                stmt = stmt.with_for_update()
+            task = session.scalars(stmt).first()
+            if task is None:
+                session.rollback()
+                return False
+            task.lease_expires_at = now + timedelta(seconds=self.lease_seconds)
+            task.updated_at = now
+            session.commit()
+            return True
+
     def _dataset_run_id(self, launch_id: str) -> tuple[str | None, bool, bool]:
         """Return the linked DatasetRun id, whether item sync is terminal, and whether it failed."""
         with self.db_mgr.get_session() as session:
@@ -206,10 +266,19 @@ class LangfuseRunScoreSyncer:
         if missing_data:
             return self._finish(task_id, token, status="FAILED", error="Run score task references missing result data")
 
+        if source != "langfuse":
+            return self._finish(task_id, token, status="SKIPPED", error="Run scores are only published for Langfuse datasets")
+        numeric_scores = {
+            metric: value
+            for metric, value in scores.items()
+            if not isinstance(value, bool) and isinstance(value, (int, float))
+        }
+        if not numeric_scores:
+            return self._finish(task_id, token, status="SKIPPED", error="NO_NUMERIC_RUN_SCORES")
         if client_error:
             return self._finish(task_id, token, status="PENDING", error=client_error, retry=True)
-        if client is None or source != "langfuse":
-            return self._finish(task_id, token, status="SKIPPED", error="Langfuse DatasetRun unavailable for this data source")
+        if client is None:
+            return self._finish(task_id, token, status="FAILED", error="LANGFUSE_CLIENT_UNAVAILABLE")
 
         try:
             dataset_run_id, all_item_sync_terminal, item_sync_failed = self._dataset_run_id(launch_id)
@@ -226,22 +295,28 @@ class LangfuseRunScoreSyncer:
                     defer=True,
                 )
 
-            for metric, value in scores.items():
-                if isinstance(value, bool) or not isinstance(value, (int, float)):
-                    continue
+            timeout_seconds = min(5, max(1, self.lease_seconds // 3))
+            for metric, value in numeric_scores.items():
+                if not self._renew_lease(task_id, token):
+                    # The former claimant must not send another score after losing its lease.
+                    return False
                 stable_id = "argus-run-" + hashlib.sha256(f"{snapshot_id}:{metric}".encode()).hexdigest()[:48]
-                client.create_score(
+                publish_run_score(
+                    client,
                     score_id=stable_id,
                     name=f"argus_{metric}",
                     value=float(value),
-                    dataset_run_id=str(dataset_run_id),
-                    data_type="NUMERIC",
+                    run_id=str(dataset_run_id),
                     metadata={"argus_snapshot_id": snapshot_id, "argus_snapshot_revision": revision},
+                    timeout_seconds=timeout_seconds,
                 )
-            client.flush()
         except Exception as exc:
             logger.exception("Failed to publish Run scores for Launch %s snapshot %s", launch_id, snapshot_id)
-            return self._finish(task_id, token, status="PENDING", error=str(exc), retry=True)
+            http_status = _http_status_code(exc)
+            if http_status is not None and 400 <= http_status < 500 and http_status not in {408, 425, 429}:
+                return self._finish(task_id, token, status="FAILED", error=f"LANGFUSE_HTTP_{http_status}")
+            error_code = str(exc) if isinstance(exc, RunScorePublishError) else "LANGFUSE_SCORE_PUBLISH_FAILED"
+            return self._finish(task_id, token, status="PENDING", error=error_code, retry=True)
         return self._finish(task_id, token, status="SYNCED")
 
     def process_batch(self, batch_size: int = 1) -> int:

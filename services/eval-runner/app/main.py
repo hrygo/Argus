@@ -369,6 +369,8 @@ async def run_experiment(request: ExperimentRequest) -> ExperimentResult:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         msg = str(exc)
+        if msg.startswith("RUNNER_"):
+            raise HTTPException(status_code=409, detail=msg) from exc
         if "not found" in msg.lower() or "archived" in msg.lower() or "inactive" in msg.lower():
             raise HTTPException(status_code=404, detail=msg) from exc
         raise HTTPException(status_code=400, detail=msg) from exc

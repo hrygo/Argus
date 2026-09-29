@@ -9,6 +9,7 @@ from sqlalchemy import select
 from .aggregation import aggregate_run, compare_case_results
 from .db_models import ExperimentLaunchRecord, RunResultSnapshotRecord
 from .models import ComparisonResponse, RunSummaryResponse
+from .result_outputs import ComparisonCaseOutputResponse, fetch_observation_output
 from .result_snapshots import create_result_snapshot, latest_result_snapshot
 
 router = APIRouter(prefix="/api/v1/experiment-launches", tags=["Evaluation Results"])
@@ -39,10 +40,24 @@ def _versions(manifest: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _get_snapshot(session, launch_id: str) -> tuple[ExperimentLaunchRecord, RunResultSnapshotRecord]:
+def _get_snapshot(
+    session, launch_id: str, snapshot_id: str | None = None
+) -> tuple[ExperimentLaunchRecord, RunResultSnapshotRecord]:
     launch = session.get(ExperimentLaunchRecord, launch_id)
     if not launch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Launch '{launch_id}' not found")
+    if snapshot_id is not None:
+        snapshot = session.scalars(
+            select(RunResultSnapshotRecord).where(
+                RunResultSnapshotRecord.id == snapshot_id,
+                RunResultSnapshotRecord.launch_id == launch_id,
+            )
+        ).first()
+        if snapshot is None:
+            # Do not reveal whether an ID exists under another Launch.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Result snapshot not found")
+        return launch, snapshot
+
     snapshot = latest_result_snapshot(session, launch_id)
     if snapshot is None and launch.status in {"COMPLETED", "PARTIAL_FAILED", "FAILED", "CANCELLED"}:
         snapshot = create_result_snapshot(session, launch)
@@ -52,10 +67,21 @@ def _get_snapshot(session, launch_id: str) -> tuple[ExperimentLaunchRecord, RunR
     return launch, snapshot
 
 
+def _dataset_identity(manifest: dict[str, Any]) -> tuple[str, str] | None:
+    dataset = manifest.get("dataset") or {}
+    source = dataset.get("source")
+    dataset_id = dataset.get("dataset_id")
+    if not isinstance(source, str) or not source.strip() or not isinstance(dataset_id, str) or not dataset_id.strip():
+        return None
+    return source.strip(), dataset_id.strip()
+
+
 @router.get("/{launch_id}/summary", response_model=RunSummaryResponse, summary="Get a stable run-level evaluation summary")
-def get_run_summary(launch_id: str) -> RunSummaryResponse:
+def get_run_summary(
+    launch_id: str, snapshot_id: str | None = None
+) -> RunSummaryResponse:
     with _db_manager().get_session() as session:
-        _, snapshot = _get_snapshot(session, launch_id)
+        _, snapshot = _get_snapshot(session, launch_id, snapshot_id)
         from .db_models import LangfuseRunScoreTaskRecord
 
         score_task = session.scalars(select(LangfuseRunScoreTaskRecord).where(
@@ -79,6 +105,7 @@ def get_run_summary(launch_id: str) -> RunSummaryResponse:
 @router.get("/{launch_id}/comparison", response_model=ComparisonResponse, summary="Compare a Candidate against its frozen Baseline")
 def get_launch_comparison(
     launch_id: str,
+    snapshot_id: str | None = None,
     classification: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     cursor: int = Query(default=0, ge=0),
@@ -88,7 +115,7 @@ def get_launch_comparison(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"classification must be one of {sorted(allowed)}")
 
     with _db_manager().get_session() as session:
-        candidate_launch, candidate_snapshot = _get_snapshot(session, launch_id)
+        candidate_launch, candidate_snapshot = _get_snapshot(session, launch_id, snapshot_id)
         comparison_manifest = candidate_snapshot.manifest.get("comparison", {})
         baseline_id = comparison_manifest.get("baseline_snapshot_id")
         baseline_snapshot = session.get(RunResultSnapshotRecord, baseline_id) if baseline_id else None
@@ -99,6 +126,14 @@ def get_launch_comparison(
         baseline_items = {item["dataset_item_id"]: item for item in (baseline_snapshot.items if baseline_snapshot else [])}
         candidate_items = {item["dataset_item_id"]: item for item in candidate_snapshot.items}
         all_case_ids = sorted(set(baseline_items) | set(candidate_items))
+        candidate_dataset_identity = _dataset_identity(candidate_snapshot.manifest)
+        baseline_dataset_identity = _dataset_identity(baseline_snapshot.manifest) if baseline_snapshot else None
+        dataset_identity_error = None
+        if baseline_snapshot:
+            if candidate_dataset_identity is None or baseline_dataset_identity is None:
+                dataset_identity_error = "DATASET_IDENTITY_UNKNOWN"
+            elif candidate_dataset_identity != baseline_dataset_identity:
+                dataset_identity_error = "DATASET_IDENTITY_MISMATCH"
         evaluator_specs = candidate_snapshot.manifest.get("evaluators", [])
         baseline_evaluators = baseline_snapshot.manifest.get("evaluators", []) if baseline_snapshot else []
         diffs: list[dict[str, Any]] = []
@@ -118,6 +153,8 @@ def get_launch_comparison(
                     evaluator_specs=evaluator_specs,
                     baseline_evaluators=baseline_evaluators,
                 )
+                if dataset_identity_error:
+                    diff.update(classification="NOT_COMPARABLE", reason=dataset_identity_error)
             diff["baseline_output_ref"] = base_case.get("output_ref") if base_case else None
             diff["candidate_output_ref"] = candidate_case.get("output_ref") if candidate_case else None
             diff["baseline_experiment_url"] = baseline_launch.langfuse_experiment_url if baseline_launch else None
@@ -176,4 +213,75 @@ def get_launch_comparison(
             classification_counts=dict(classification_counts),
             items=page,
             next_cursor=next_cursor,
+        )
+
+
+@router.get(
+    "/{launch_id}/comparison/case",
+    response_model=ComparisonCaseOutputResponse,
+    summary="Read frozen baseline and candidate outputs for one comparison case",
+)
+def get_comparison_case(
+    launch_id: str,
+    snapshot_id: str = Query(..., min_length=1),
+    dataset_item_id: str = Query(..., min_length=1),
+) -> ComparisonCaseOutputResponse:
+    with _db_manager().get_session() as session:
+        candidate_launch, candidate_snapshot = _get_snapshot(session, launch_id, snapshot_id)
+        candidate_case = next(
+            (item for item in candidate_snapshot.items if item.get("dataset_item_id") == dataset_item_id),
+            None,
+        )
+        if candidate_case is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comparison case not found")
+
+        comparison_manifest = candidate_snapshot.manifest.get("comparison", {})
+        baseline_id = comparison_manifest.get("baseline_snapshot_id")
+        baseline_snapshot = session.get(RunResultSnapshotRecord, baseline_id) if baseline_id else None
+        if baseline_id and baseline_snapshot is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Frozen Baseline result snapshot is unavailable")
+        baseline_launch = session.get(ExperimentLaunchRecord, baseline_snapshot.launch_id) if baseline_snapshot else None
+        baseline_case = next(
+            (item for item in (baseline_snapshot.items if baseline_snapshot else [])
+             if item.get("dataset_item_id") == dataset_item_id),
+            None,
+        )
+
+        if baseline_snapshot is None:
+            classification, reason = "NOT_COMPARABLE", "BASELINE_NOT_BOUND"
+        else:
+            baseline_identity = _dataset_identity(baseline_snapshot.manifest)
+            candidate_identity = _dataset_identity(candidate_snapshot.manifest)
+            if baseline_identity is None or candidate_identity is None:
+                classification, reason = "NOT_COMPARABLE", "DATASET_IDENTITY_UNKNOWN"
+            elif baseline_identity != candidate_identity:
+                classification, reason = "NOT_COMPARABLE", "DATASET_IDENTITY_MISMATCH"
+            else:
+                diff = compare_case_results(
+                    baseline_case,
+                    candidate_case,
+                    evaluator_specs=candidate_snapshot.manifest.get("evaluators", []),
+                    baseline_evaluators=baseline_snapshot.manifest.get("evaluators", []),
+                )
+                classification, reason = diff["classification"], diff.get("reason")
+
+        baseline_output = fetch_observation_output(
+            baseline_case.get("output_ref") if baseline_case else None,
+            scores=baseline_case.get("scores") if baseline_case else {},
+            trace_url=baseline_case.get("trace_url") if baseline_case else (baseline_launch.langfuse_experiment_url if baseline_launch else None),
+        )
+        candidate_output = fetch_observation_output(
+            candidate_case.get("output_ref"),
+            scores=candidate_case.get("scores"),
+            trace_url=candidate_case.get("trace_url") or candidate_launch.langfuse_experiment_url,
+        )
+        return ComparisonCaseOutputResponse(
+            launch_id=launch_id,
+            candidate_snapshot_id=candidate_snapshot.id,
+            baseline_snapshot_id=baseline_snapshot.id if baseline_snapshot else None,
+            dataset_item_id=dataset_item_id,
+            classification=classification,
+            reason=reason,
+            baseline=baseline_output,
+            candidate=candidate_output,
         )

@@ -91,3 +91,58 @@ def test_run_scope_evaluators_are_not_treated_as_case_scores():
 
     assert diff["classification"] == "UNCHANGED"
     assert summary["score_means"] == {"correctness": 1.0}
+
+
+def test_case_comparison_prioritizes_execution_failure_over_skipped_evaluator():
+    diff = compare_case_results(
+        {"dataset_item_id": "case-1", "case_digest": "same", "execution_status": "failed", "eval_status": "skipped", "quality_conclusion": "unknown"},
+        {"dataset_item_id": "case-1", "case_digest": "same", "execution_status": "succeeded", "eval_status": "succeeded", "quality_conclusion": "pass", "scores": {"correctness": 1.0}},
+        evaluator_specs=[{"id": "correctness", "version": "1.0.0"}],
+        baseline_evaluators=[{"id": "correctness", "version": "1.0.0"}],
+    )
+    assert diff["classification"] == "NOT_COMPARABLE"
+    assert diff["reason"] == "EXECUTION_ERROR"
+
+
+def test_case_comparison_distinguishes_evaluator_failure_from_not_completed():
+    baseline = {"dataset_item_id": "case-1", "case_digest": "same", "execution_status": "succeeded", "quality_conclusion": "pass", "scores": {"correctness": 1.0}}
+    specs = [{"id": "correctness", "version": "1.0.0"}]
+    failed = compare_case_results(
+        {**baseline, "eval_status": "failed"}, {**baseline, "eval_status": "succeeded"},
+        evaluator_specs=specs, baseline_evaluators=specs,
+    )
+    skipped = compare_case_results(
+        {**baseline, "eval_status": "skipped"}, {**baseline, "eval_status": "succeeded"},
+        evaluator_specs=specs, baseline_evaluators=specs,
+    )
+    assert failed["reason"] == "EVALUATOR_ERROR"
+    assert skipped["reason"] == "EVALUATION_NOT_COMPLETED"
+
+
+def test_case_comparison_reports_missing_content_evidence_as_unknown():
+    diff = compare_case_results(
+        {"dataset_item_id": "case-1", "case_digest": None, "execution_status": "succeeded", "eval_status": "succeeded", "quality_conclusion": "pass", "scores": {"correctness": 1.0}},
+        {"dataset_item_id": "case-1", "case_digest": "same", "execution_status": "succeeded", "eval_status": "succeeded", "quality_conclusion": "pass", "scores": {"correctness": 1.0}},
+        evaluator_specs=[{"id": "correctness", "version": "1.0.0"}],
+        baseline_evaluators=[{"id": "correctness", "version": "1.0.0"}],
+    )
+    assert diff["classification"] == "NOT_COMPARABLE"
+    assert diff["reason"] == "CASE_CONTENT_UNKNOWN"
+
+
+def test_full_run_health_uses_all_cases_when_evaluator_fails_after_partial_execution():
+    cases = [
+        {"dataset_item_id": f"ok-{i}", "execution_status": "succeeded", "eval_status": "succeeded", "quality_conclusion": "pass", "scores": {"correctness": 1.0}}
+        for i in range(8)
+    ]
+    cases += [
+        {"dataset_item_id": "timeout", "execution_status": "timed_out", "eval_status": "skipped", "quality_conclusion": "unknown", "scores": {}},
+        {"dataset_item_id": "eval-error", "execution_status": "succeeded", "eval_status": "failed", "quality_conclusion": "unknown", "scores": {}},
+    ]
+    summary = aggregate_run(cases, evaluator_specs=[{"id": "correctness", "critical": True}])
+    assert summary["total_cases"] == 10
+    assert summary["evaluated_cases"] == 8
+    assert summary["evaluation_coverage"] == 0.8
+    assert summary["execution_error_count"] == 1
+    assert summary["execution_error_rate"] == 0.1
+    assert summary["evaluator_error_count"] == 1

@@ -9,12 +9,12 @@ from typing import Any
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from .config import settings
 from .dataset import DatasetResolver
 from .db import DatabaseManager
 from .db_models import ExperimentLaunchRecord
 from .evaluators import default_evaluator_registry
 from .registry import AgentRegistry
+from .runner_identity import current_runner_identity, validate_runner_identity
 
 
 def compute_payload_digest(payload: dict[str, Any]) -> str:
@@ -65,6 +65,10 @@ class LaunchService:
         from .baselines import normalize_environment
 
         normalized_environment = normalize_environment(environment)
+        runner_identity = current_runner_identity(runner_version=self.runner_version)
+        identity_error = validate_runner_identity(runner_identity.model_dump(), runner_identity)
+        if identity_error:
+            raise ValueError(f"{identity_error}: runner build identity is unavailable")
         if evaluator_ids is not None and len(evaluator_ids) == 0:
             raise ValueError("evaluator_ids must not be empty. A launch must have at least one evaluator.")
 
@@ -170,9 +174,7 @@ class LaunchService:
                 "threshold_rule": "score >= threshold",
             },
             "runner": {
-                "runner_version": self.runner_version,
-                "build_id": settings.build_id,
-                "mapping_engine_version": "sha256-mapping-engine-v1",
+                **runner_identity.model_dump(),
             },
             "execution_policy": {
                 "max_concurrency": effective_concurrency,

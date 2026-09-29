@@ -79,7 +79,7 @@ def create_experiment_launch(
         return _enrich_launch(launch, orchestrator)
     except ValueError as exc:
         msg = str(exc)
-        if "conflict" in msg.lower():
+        if "conflict" in msg.lower() or msg.startswith("RUNNER_"):
             raise HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail=msg) from exc
         elif "not found" in msg.lower():
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=msg) from exc

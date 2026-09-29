@@ -22,6 +22,7 @@ from .evaluators import default_evaluator_registry, evaluate_item_quality
 from .executor import AttemptAuthorizationError, RemoteAgentExecutor
 from .manifest import acquire_launch_execution
 from .registry import AgentRegistry, AgentVersionSpec, map_request
+from .runner_identity import current_runner_identity, validate_runner_identity
 from .state_machine import aggregate_launch_status_from_items, assert_terminal_launch_invariants
 
 
@@ -57,6 +58,9 @@ async def _execute_single_item(
     manifest: dict[str, Any],
     lf: Any = None,
 ) -> dict[str, Any]:
+    identity_error = validate_runner_identity(manifest.get("runner"), current_runner_identity())
+    if identity_error:
+        raise ValueError(identity_error)
     item_id = str(item_row.get("id", ""))
     dataset_input = item_row.get("input", {})
     expected_output = item_row.get("expected_output", {})
@@ -341,6 +345,20 @@ class LaunchExecutionService:
         self.gather_fn = gather_fn or asyncio.gather
 
     async def execute_launch(self, launch_id: str, dataset_client: Any = None) -> LaunchExecutionOutcome:
+        # Reject an incompatible frozen Runner before taking the execution lock or making outbound calls.
+        with self.db_manager.get_session() as session:
+            preflight_launch = session.get(ExperimentLaunchRecord, launch_id)
+            if preflight_launch is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Launch '{launch_id}' not found",
+                )
+            identity_error = validate_runner_identity(
+                preflight_launch.manifest.get("runner"), current_runner_identity()
+            )
+            if identity_error:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=identity_error)
+
         # 1. Acquire atomic execution lock
         acquired = acquire_launch_execution(self.db_manager, launch_id)
         if not acquired:

@@ -6,6 +6,8 @@ import pytest
 
 # Ensure tests default to test DB mode unless explicitly overridden
 os.environ.setdefault("ARGUS_DB_MODE", "test")
+os.environ.setdefault("ARGUS_BUILD_ID", "test-build-001")
+os.environ.setdefault("RUNNER_VERSION", "0.1.0")
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "services" / "eval-runner") not in sys.path:

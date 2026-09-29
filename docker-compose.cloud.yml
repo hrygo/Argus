@@ -40,7 +40,11 @@ services:
       start_period: 10s
 
   eval-runner:
-    build: {context: ./services/eval-runner}
+    build:
+      context: ./services/eval-runner
+      args:
+        ARGUS_BUILD_ID: ${ARGUS_BUILD_ID:-dev}
+        RUNNER_VERSION: 0.1.0
     restart: unless-stopped
     depends_on:
       demo-agent-v1: {condition: service_healthy}

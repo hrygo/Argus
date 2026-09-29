@@ -3,7 +3,7 @@
   "info": {
     "title": "Enterprise Remote Agent Eval Runner",
     "description": "Enterprise Agent Evaluation Control Plane with Persistent Registry, Version Snapshots, and Zero-SDK Agents.",
-    "version": "0.2.0"
+    "version": "0.1.0"
   },
   "paths": {
     "/api/v1/agents": {
@@ -1356,6 +1356,22 @@
               "type": "string",
               "title": "Launch Id"
             }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
           }
         ],
         "responses": {
@@ -1397,6 +1413,22 @@
             "schema": {
               "type": "string",
               "title": "Launch Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
             }
           },
           {
@@ -1446,6 +1478,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiment-launches/{launch_id}/comparison/case": {
+      "get": {
+        "tags": [
+          "Evaluation Results"
+        ],
+        "summary": "Read frozen baseline and candidate outputs for one comparison case",
+        "operationId": "get_comparison_case_api_v1_experiment_launches__launch_id__comparison_case_get",
+        "parameters": [
+          {
+            "name": "launch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Launch Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "dataset_item_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Dataset Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonCaseOutputResponse"
                 }
               }
             }
@@ -2319,6 +2413,64 @@
           "items_upserted"
         ],
         "title": "BootstrapResult"
+      },
+      "ComparisonCaseOutputResponse": {
+        "properties": {
+          "launch_id": {
+            "type": "string",
+            "title": "Launch Id"
+          },
+          "candidate_snapshot_id": {
+            "type": "string",
+            "title": "Candidate Snapshot Id"
+          },
+          "baseline_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Snapshot Id"
+          },
+          "dataset_item_id": {
+            "type": "string",
+            "title": "Dataset Item Id"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/OutputSideResponse"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/OutputSideResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "launch_id",
+          "candidate_snapshot_id",
+          "dataset_item_id",
+          "classification",
+          "baseline",
+          "candidate"
+        ],
+        "title": "ComparisonCaseOutputResponse"
       },
       "ComparisonResponse": {
         "properties": {
@@ -3361,6 +3513,72 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "OutputSideResponse": {
+        "properties": {
+          "output_status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "NO_REFERENCE",
+              "NOT_FOUND",
+              "FETCH_FAILED"
+            ],
+            "title": "Output Status"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          },
+          "scores": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Scores",
+            "default": {}
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output_status"
+        ],
+        "title": "OutputSideResponse"
       },
       "RetryFailedRequest": {
         "properties": {

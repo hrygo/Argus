@@ -22,6 +22,7 @@ from .limiter import DistributedAgentLimiter
 from .metrics import runtime_metrics
 from .queue import QueueAdapter
 from .registry import AgentVersionSpec, map_request
+from .runner_identity import RunnerIdentity, current_runner_identity, validate_runner_identity
 
 try:
     from opentelemetry.propagate import inject
@@ -39,11 +40,13 @@ class ExecutionWorker:
         queue: QueueAdapter,
         limiter: DistributedAgentLimiter,
         worker_id: str | None = None,
+        runner_identity: RunnerIdentity | None = None,
     ):
         self.db_mgr = db_mgr
         self.queue = queue
         self.limiter = limiter
         self.worker_id = worker_id or f"worker-{uuid.uuid4().hex[:8]}"
+        self.runner_identity = runner_identity or current_runner_identity()
         self.local_concurrency = asyncio.Semaphore(10)
         self.heartbeat_interval = 5.0
 
@@ -422,6 +425,21 @@ class ExecutionWorker:
                 matched = next((it for it in items_seed if str(it.get("id")) == item_rec.dataset_item_id), {})
                 dataset_input = matched.get("input", {})
                 expected_output = matched.get("expected_output", {})
+
+                identity_error = validate_runner_identity(manifest.get("runner"), self.runner_identity)
+                if identity_error:
+                    # Fence the claimed item as a pre-execution failure. No Attempt or Agent call is created.
+                    finalized = self.finalize_item(
+                        item_id=item_id,
+                        generation=generation,
+                        lease_token=token,
+                        status="FAILED",
+                        eval_status="skipped",
+                        quality_conclusion="unknown",
+                        execution_error=identity_error,
+                    )
+                    self.queue.ack(message_id)
+                    return finalized
 
                 # If launch is still QUEUED, transition to RUNNING atomically
                 if launch_rec.status == "QUEUED":

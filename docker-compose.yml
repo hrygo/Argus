@@ -180,7 +180,11 @@ services:
       retries: 10
 
   eval-runner:
-    build: {context: ./services/eval-runner}
+    build:
+      context: ./services/eval-runner
+      args:
+        ARGUS_BUILD_ID: ${ARGUS_BUILD_ID:-dev}
+        RUNNER_VERSION: 0.1.0
     restart: unless-stopped
     depends_on:
       postgres: {condition: service_healthy}

@@ -125,19 +125,25 @@ def compare_case_results(
     if not baseline or not candidate:
         result.update(classification="NOT_COMPARABLE", reason="CASE_MISSING")
         return result
-    if baseline.get("case_digest") != candidate.get("case_digest"):
+    digests = (baseline.get("case_digest"), candidate.get("case_digest"))
+    if any(not isinstance(digest, str) or not digest for digest in digests):
+        result.update(classification="NOT_COMPARABLE", reason="CASE_CONTENT_UNKNOWN")
+        return result
+    if digests[0] != digests[1]:
         result.update(classification="NOT_COMPARABLE", reason="CASE_CONTENT_CHANGED")
         return result
     if _contract(baseline_evaluators) != _contract(evaluator_specs):
         result.update(classification="NOT_COMPARABLE", reason="EVALUATION_CONTRACT_CHANGED")
         return result
-    if any(str(item.get("eval_status", "")).lower() != "succeeded" for item in (baseline, candidate)):
-        result.update(classification="NOT_COMPARABLE", reason="EVALUATOR_ERROR")
-        return result
     if any(str(item.get("execution_status", "")).lower() != "succeeded" for item in (baseline, candidate)):
         result.update(classification="NOT_COMPARABLE", reason="EXECUTION_ERROR")
         return result
-
+    if any(str(item.get("eval_status", "")).lower() == "failed" for item in (baseline, candidate)):
+        result.update(classification="NOT_COMPARABLE", reason="EVALUATOR_ERROR")
+        return result
+    if any(str(item.get("eval_status", "")).lower() != "succeeded" for item in (baseline, candidate)):
+        result.update(classification="NOT_COMPARABLE", reason="EVALUATION_NOT_COMPLETED")
+        return result
     baseline_scores = baseline.get("scores") or {}
     candidate_scores = candidate.get("scores") or {}
     has_regression = False

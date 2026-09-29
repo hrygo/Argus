@@ -307,6 +307,8 @@ make demo
 
 Console 侧边栏的 Langfuse Dashboard 链接使用 `ARGUS_LANGFUSE_DASHBOARD_URL`。本地 Compose 未单独配置时沿用 `NEXTAUTH_URL`；若浏览器访问地址不同，请在 `.env.poc` 中设置该变量。这个浏览器 UI 地址与 Runner 在容器网络内使用的 `LANGFUSE_BASE_URL` 可以不同。远程访问时请配置浏览器实际可达的域名或 IP，不要使用服务器侧的 `localhost`。地址中的 `/langfuse` 等路径前缀会原样保留；Langfuse 及反向代理的子路径部署仍需由部署配置支持。
 
+`make up` 会将当前 Git commit SHA 作为 Runner 镜像内的 `ARGUS_BUILD_ID`，并由 API 与 Worker 共用该镜像身份。通过其他方式构建或部署时，也必须将 `ARGUS_BUILD_ID` 设置为不可变、可定位的提交 SHA 或镜像摘要；空值及通用 `dev` / `latest` 身份不会被接受为正式 Launch。
+
 该变量由 Compose 在创建 Runner 容器时注入；修改配置后需要重新创建容器，单独执行 `docker compose restart` 不会更新容器环境变量。按所用部署方式执行：
 
 ```bash
