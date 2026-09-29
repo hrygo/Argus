@@ -43,3 +43,11 @@
 - 正式 Launch 必须设置不可变、可定位的 `ARGUS_BUILD_ID`（commit SHA 或镜像摘要），空值与 `dev` / `latest` 不会被接受；
 - 敏感 Header（Authorization、Cookie）不得写入 Langfuse Trace；
 - 接入外部 Agent 时自行评估 timeout、重试边界与 SSRF 风险。
+
+## 许可与再分发
+
+本仓库的许可协议尚未确定，仓库内也没有 `LICENSE` 文件。**在协议确定前，请勿对外分发本项目，或以任何形式声明对其的授权、许可与商标使用权。**
+
+- 自建部署用于内部评测属于可接受用法；对外提供 SaaS、转售或打包分发前请先取得明确授权；
+- 仓库内的 Demo Agent、示例 Dataset、演示凭据与本地 Compose 配置不构成产品边界，随项目一并获得授权的范围也仅限于协议确定后写明的条款；
+- 许可协议确定后，本节会替换为正式的授权条款。

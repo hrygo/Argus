@@ -11,6 +11,8 @@
 | 改 Langfuse 界面语言 | 见 [deploy/langfuse/README.md](./deploy/langfuse/README.md) |
 | 报告安全漏洞 | **不要**提公开 Issue，见 [SECURITY.md](./SECURITY.md) |
 
+仓库目前没有 Issue / PR 模板。提 PR 时请在描述里写清「问题、方案、测试证据、兼容性影响、风险」；没有 Issue 的改动请在描述中补上动机与验收标准。
+
 ## 开发环境
 
 ```bash
