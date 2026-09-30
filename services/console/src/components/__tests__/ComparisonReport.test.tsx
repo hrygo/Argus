@@ -50,12 +50,17 @@ const metrics = (overrides: Record<string, unknown> = {}) => ({
   execution_error_rate: 0,
   evaluator_error_count: 0,
   p95_latency_ms: 120,
-  cost_per_case: null,
+  cost_per_case: 0.021,
+  total_cost: 0.21,
+  cost_currency: "USD",
+  cost_case_count: 10,
+  cost_coverage: 1,
+  cost_unavailable_reason: null,
   score_means: { correctness: 0.9 },
   ...overrides,
 });
 
-const comparisonPage = (snapshotId: string, caseId: string, nextCursor: number | null, launchId = "candidate-launch") => ({
+const comparisonPage = (snapshotId: string, caseId: string, nextCursor: number | null, launchId = "candidate-launch"): any => ({
   launch_id: launchId,
   candidate_snapshot_id: snapshotId,
   baseline_snapshot_id: "baseline-snapshot",
@@ -79,8 +84,13 @@ const comparisonPage = (snapshotId: string, caseId: string, nextCursor: number |
       evaluator_error_count: 1,
     }),
     comparable_cohort: {
-      baseline: metrics(),
-      candidate: metrics({ pass_rate: 0.8, score_means: { correctness: 0.8 } }),
+      baseline: metrics({ cost_per_case: 0.021, total_cost: 0.168, cost_case_count: 8, total_cases: 8, cost_coverage: 1 }),
+      candidate: metrics({ pass_rate: 0.8, score_means: { correctness: 0.8 }, cost_per_case: 0.017, total_cost: 0.136, cost_case_count: 8, total_cases: 8, cost_coverage: 1 }),
+    },
+    cost_comparison: {
+      status: "COMPARABLE", reason: null, cohort: "quality_comparable_cases", case_count: 8,
+      currency: "USD", baseline_cost_per_case: 0.021, candidate_cost_per_case: 0.017,
+      delta: -0.004, baseline_coverage: 1, candidate_coverage: 1,
     },
   },
   classification_counts: { REGRESSION: 1, IMPROVEMENT: 1, UNCHANGED: 0, NOT_COMPARABLE: 0 },
@@ -136,11 +146,13 @@ const ComparisonReportRoute = ({ launchStatus }: { launchStatus: string }) => {
 describe("ComparisonReport", () => {
   let queryClient: QueryClient;
   let latestSummaryReads: number;
+  let costReason: string | null;
 
   beforeEach(() => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.clearAllMocks();
     latestSummaryReads = 0;
+    costReason = null;
     window.history.replaceState({}, "", "/launches/candidate-launch");
     (api.GET as any).mockImplementation((path: string, options: any) => {
       const launchId = options.params.path.launch_id;
@@ -161,11 +173,25 @@ describe("ComparisonReport", () => {
       }
       if (path.endsWith("/comparison")) {
         const { cursor, snapshot_id: snapshotId } = options.params.query;
-        return Promise.resolve({
-          data: cursor === 0
-            ? comparisonPage(snapshotId, "case-1", 1, launchId)
-            : comparisonPage(snapshotId, "case-2", null, launchId),
-        });
+        const page = cursor === 0
+          ? comparisonPage(snapshotId, "case-1", 1, launchId)
+          : comparisonPage(snapshotId, "case-2", null, launchId);
+        if (costReason) {
+          page.summary.cost_comparison = { ...page.summary.cost_comparison, status: "NOT_COMPARABLE", reason: costReason, delta: null };
+          if (costReason === "PARTIAL_COST_COVERAGE") {
+            page.summary.comparable_cohort.candidate.cost_case_count = 4;
+            page.summary.comparable_cohort.candidate.cost_coverage = 0.5;
+            page.summary.cost_comparison.candidate_coverage = 0.5;
+          }
+          if (costReason === "COST_NOT_RECORDED") {
+            page.summary.comparable_cohort.candidate.cost_per_case = null;
+            page.summary.comparable_cohort.candidate.cost_case_count = 0;
+            page.summary.comparable_cohort.candidate.cost_coverage = 0;
+            page.summary.cost_comparison.candidate_cost_per_case = null;
+            page.summary.cost_comparison.candidate_coverage = 0;
+          }
+        }
+        return Promise.resolve({ data: page });
       }
       return Promise.resolve({ data: null });
     });
@@ -202,6 +228,11 @@ describe("ComparisonReport", () => {
     );
     expect(screen.getByRole("table", { name: "Baseline 与 Candidate 全量运行健康指标" })).toHaveTextContent("80.0%");
     expect(screen.getByRole("table", { name: "Baseline 与 Candidate 全量运行健康指标" })).toHaveTextContent("1");
+    const aggregateTable = screen.getByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
+    expect(within(aggregateTable).getByRole("row", { name: /Cost \/ Case/ })).toHaveTextContent("$0.021");
+    expect(within(aggregateTable).getByRole("row", { name: /Cost \/ Case/ })).toHaveTextContent("$0.017");
+    expect(within(aggregateTable).getByRole("row", { name: /Cost \/ Case/ })).toHaveTextContent("-$0.004");
+    expect(within(aggregateTable).getByRole("row", { name: /Cost Coverage/ })).toHaveTextContent("8/8 (100.0%)");
 
     fireEvent.click(await screen.findByRole("button", { name: "加载更多用例（已显示 1 条）" }));
     expect(await screen.findByText("case-2")).toBeInTheDocument();
@@ -210,6 +241,30 @@ describe("ComparisonReport", () => {
       expect(comparisonCalls.length).toBeGreaterThanOrEqual(2);
       expect(comparisonCalls.every((call: any[]) => call[1].params.query.snapshot_id === "candidate-snapshot")).toBe(true);
     });
+  });
+
+
+  it("does not invent a cost delta when coverage is partial and explains why", async () => {
+    costReason = "PARTIAL_COST_COVERAGE";
+    renderReport();
+    const aggregateTable = await screen.findByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
+    const row = within(aggregateTable).getByRole("row", { name: /Cost \/ Case/ });
+    expect(row).toHaveTextContent("$0.021");
+    expect(row).toHaveTextContent("$0.017");
+    expect(row).toHaveTextContent("—");
+    expect(within(aggregateTable).getByRole("row", { name: /Cost Coverage/ })).toHaveTextContent("4/8 (50.0%)");
+    expect(await screen.findByText(/成本说明：/)).toHaveTextContent("覆盖不完整");
+  });
+
+  it("shows em dashes and an explanation when no cost evidence was recorded", async () => {
+    costReason = "COST_NOT_RECORDED";
+    renderReport();
+    const aggregateTable = await screen.findByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
+    const row = within(aggregateTable).getByRole("row", { name: /Cost \/ Case/ });
+    expect(row).toHaveTextContent("$0.021");
+    expect(row).toHaveTextContent("—");
+    expect(within(aggregateTable).getByRole("row", { name: /Cost Coverage/ })).toHaveTextContent("0/8 (0.0%)");
+    expect(await screen.findByText(/成本说明：/)).toHaveTextContent("未记录成本的 Case 不按 0 计入");
   });
 
   it("loads an explicitly pinned historical snapshot while a retry is running", async () => {

@@ -2003,6 +2003,16 @@
             "title": "Request Mapping",
             "description": "Dot-path field mapping"
           },
+          "usage_cost_mapping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageCostMapping"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "request_schema": {
             "anyOf": [
               {
@@ -2178,6 +2188,16 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Request Mapping"
+          },
+          "usage_cost_mapping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageCostMapping"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "request_schema": {
             "anyOf": [
@@ -3681,6 +3701,83 @@
           "environment"
         ],
         "title": "SystemInfoResponse"
+      },
+      "UsageCostMapping": {
+        "properties": {
+          "input_tokens_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens Path"
+          },
+          "output_tokens_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens Path"
+          },
+          "total_tokens_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens Path"
+          },
+          "amount_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Path"
+          },
+          "currency_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency Path"
+          },
+          "source": {
+            "type": "string",
+            "const": "provider_reported",
+            "title": "Source",
+            "default": "provider_reported"
+          },
+          "measurement_scope": {
+            "type": "string",
+            "const": "agent_invocation_total",
+            "title": "Measurement Scope"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "measurement_scope"
+        ],
+        "title": "UsageCostMapping",
+        "description": "Explicit dot-path mapping for usage and invocation-total cost in a JSON response."
       },
       "ValidationError": {
         "properties": {

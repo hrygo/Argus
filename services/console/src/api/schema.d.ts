@@ -634,6 +634,7 @@ export interface components {
             request_mapping?: {
                 [key: string]: string;
             };
+            usage_cost_mapping?: components["schemas"]["UsageCostMapping"] | null;
             /** Request Schema */
             request_schema?: {
                 [key: string]: unknown;
@@ -723,6 +724,7 @@ export interface components {
             request_mapping: {
                 [key: string]: unknown;
             };
+            usage_cost_mapping?: components["schemas"]["UsageCostMapping"] | null;
             /** Request Schema */
             request_schema?: {
                 [key: string]: unknown;
@@ -1312,6 +1314,33 @@ export interface components {
             environment: string;
             /** Langfuse Dashboard Url */
             langfuse_dashboard_url?: string | null;
+        };
+        /**
+         * UsageCostMapping
+         * @description Explicit dot-path mapping for usage and invocation-total cost in a JSON response.
+         */
+        UsageCostMapping: {
+            /** Input Tokens Path */
+            input_tokens_path?: string | null;
+            /** Output Tokens Path */
+            output_tokens_path?: string | null;
+            /** Total Tokens Path */
+            total_tokens_path?: string | null;
+            /** Amount Path */
+            amount_path?: string | null;
+            /** Currency Path */
+            currency_path?: string | null;
+            /**
+             * Source
+             * @default provider_reported
+             * @constant
+             */
+            source: "provider_reported";
+            /**
+             * Measurement Scope
+             * @constant
+             */
+            measurement_scope: "agent_invocation_total";
         };
         /** ValidationError */
         ValidationError: {

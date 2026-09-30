@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -169,11 +170,43 @@ class AgentConcurrencyError(AgentRegistryError, ValueError):
 
 
 
+class UsageCostMapping(BaseModel):
+    """Explicit dot-path mapping for usage and invocation-total cost in a JSON response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    input_tokens_path: str | None = None
+    output_tokens_path: str | None = None
+    total_tokens_path: str | None = None
+    amount_path: str | None = None
+    currency_path: str | None = None
+    source: Literal["provider_reported"] = "provider_reported"
+    measurement_scope: Literal["agent_invocation_total"]
+
+    @field_validator(
+        "input_tokens_path", "output_tokens_path", "total_tokens_path", "amount_path", "currency_path"
+    )
+    @classmethod
+    def validate_json_path(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*", value):
+            raise ValueError("Usage/cost paths must be simple dot-separated JSON object keys")
+        return value
+
+    @model_validator(mode="after")
+    def validate_mapping(self) -> UsageCostMapping:
+        if bool(self.amount_path) != bool(self.currency_path):
+            raise ValueError("amount_path and currency_path must be configured together")
+        if not any((self.input_tokens_path, self.output_tokens_path, self.total_tokens_path, self.amount_path)):
+            raise ValueError("At least one usage or cost response path must be configured")
+        return self
+
+
 class AgentVersionSpecValidator(BaseModel):
     endpoint: str = Field(..., description="HTTP POST URL of the agent")
     protocol: str = Field(default="HTTP_JSON", description="Invocation protocol, currently HTTP_JSON only")
     method: str = Field(default="POST", description="HTTP method, currently POST only")
     request_mapping: dict[str, str] = Field(default_factory=dict, description="Dot-path field mapping")
+    usage_cost_mapping: UsageCostMapping | None = None
     request_schema: dict[str, Any] | None = None
     response_schema: dict[str, Any] | None = None
     credential_ref: str | None = Field(default=None, description="Reference to secret, e.g. env://NAME")
@@ -248,6 +281,7 @@ class AgentVersionResponse(BaseModel):
     protocol: str
     method: str
     request_mapping: dict[str, Any]
+    usage_cost_mapping: UsageCostMapping | None = None
     request_schema: dict[str, Any] | None = None
     response_schema: dict[str, Any] | None = None
     credential_ref: str | None = None

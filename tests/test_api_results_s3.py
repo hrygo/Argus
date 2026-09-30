@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "services" / "eval-runner"))
 
 from app import api_results, main  # noqa: E402
-from app.db_models import ExperimentItemExecutionRecord, ExperimentLaunchRecord  # noqa: E402
+from app.aggregation import aggregate_run  # noqa: E402
+from app.db_models import ExperimentItemExecutionRecord, ExperimentLaunchRecord, RunResultSnapshotRecord  # noqa: E402
 from app.result_snapshots import create_result_snapshot  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -422,3 +423,46 @@ def test_real_retry_failed_keeps_old_snapshot_readable_and_pins_comparison(setup
     assert new_summary.summary["evaluated_cases"] == 1
     assert old_comparison.candidate_snapshot_id == failed_snapshot_id
     assert old_comparison.items[0]["reason"] == "BASELINE_NOT_BOUND"
+
+
+def test_cost_comparison_uses_frozen_cohort_and_requires_complete_compatible_costs(setup_runtime, monkeypatch):
+    db_mgr, _, _, _, _, _ = setup_runtime
+    _, baseline_snapshot_id = _launch(db_mgr, "pass", 1.0)
+    candidate_launch, candidate_snapshot_id = _launch(db_mgr, "pass", 1.0, baseline_snapshot_id)
+
+    def set_snapshot_cost(snapshot_id, amount, currency="USD", *, complete=True):
+        with db_mgr.get_session() as session:
+            snapshot = session.get(RunResultSnapshotRecord, snapshot_id)
+            items = [dict(item) for item in snapshot.items]
+            items[0]["cost"] = {
+                "amount": str(amount) if complete else None,
+                "currency": currency if complete else None,
+                "complete": complete,
+                "source": "provider_reported" if complete else None,
+                "scope": "launch_case_total" if complete else None,
+                "policy_version": "case-cost-v1" if complete else None,
+                "unavailable_reason": None if complete else "COST_NOT_RECORDED",
+            }
+            snapshot.items = items
+            snapshot.summary = aggregate_run(items, snapshot.manifest.get("evaluators", []))
+            session.commit()
+
+    monkeypatch.setattr(api_results, "_db_manager", lambda: db_mgr)
+    set_snapshot_cost(baseline_snapshot_id, "0.02")
+    set_snapshot_cost(candidate_snapshot_id, "0.015")
+    comparison = api_results.get_launch_comparison(candidate_launch, classification=None, limit=50, cursor=0)
+    cost = comparison.summary["cost_comparison"]
+    assert cost["status"] == "COMPARABLE"
+    assert cost["baseline_cost_per_case"] == 0.02
+    assert cost["candidate_cost_per_case"] == 0.015
+    assert cost["delta"] == pytest.approx(-0.005)
+
+    set_snapshot_cost(candidate_snapshot_id, "0", complete=False)
+    partial = api_results.get_launch_comparison(candidate_launch, classification=None, limit=50, cursor=0)
+    assert partial.summary["cost_comparison"]["delta"] is None
+    assert partial.summary["cost_comparison"]["reason"] == "COST_NOT_RECORDED"
+
+    set_snapshot_cost(candidate_snapshot_id, "0.015", currency="EUR")
+    mixed = api_results.get_launch_comparison(candidate_launch, classification=None, limit=50, cursor=0)
+    assert mixed.summary["cost_comparison"]["delta"] is None
+    assert mixed.summary["cost_comparison"]["reason"] == "COST_CURRENCY_MISMATCH"
