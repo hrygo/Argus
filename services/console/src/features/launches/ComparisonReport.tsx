@@ -268,7 +268,7 @@ export const ComparisonReport: React.FC<{
     ...Object.keys(cohort?.candidate.score_means ?? {}),
   ])).sort();
   const aggregateRows = cohort ? [
-    { label: "Pass Rate", baseline: percent(cohort.baseline.pass_rate), candidate: percent(cohort.candidate.pass_rate), delta: percentagePointDelta(cohort.baseline.pass_rate, cohort.candidate.pass_rate) },
+    { label: "质量通过率 (Quality Pass Rate)", baseline: percent(cohort.baseline.pass_rate), candidate: percent(cohort.candidate.pass_rate), delta: percentagePointDelta(cohort.baseline.pass_rate, cohort.candidate.pass_rate) },
     { label: "Critical Failure Cases", baseline: number(cohort.baseline.critical_failure_count), candidate: number(cohort.candidate.critical_failure_count), delta: signedDelta(cohort.baseline.critical_failure_count, cohort.candidate.critical_failure_count) },
     { label: "P95 Latency", baseline: number(cohort.baseline.p95_latency_ms, " ms"), candidate: number(cohort.candidate.p95_latency_ms, " ms"), delta: signedDelta(cohort.baseline.p95_latency_ms, cohort.candidate.p95_latency_ms, 2, " ms") },
     {
@@ -356,6 +356,15 @@ export const ComparisonReport: React.FC<{
           {cohort ? (
             <div className="space-y-1">
             <h3 className="text-xs font-semibold text-foreground">共同可比样本质量（{comparisonSummary?.comparable_case_count ?? 0} 个 Case）</h3>
+            {/* This ratio uses a different denominator from the all-cases quality
+                ratio in the Launch detail header. Name the cohort and the
+                "evaluable" rule so the two are never read as one metric. */}
+            <p
+              data-testid="comparable-quality-pass-rate-help"
+              className="pb-1 text-micro text-muted-foreground"
+            >
+              质量通过率说明：仅统计双方共同可比样本。质量通过率为质量 PASS 数 / 有效已评测数；有效已评测要求执行成功、评测成功且质量结论为 PASS 或 FAIL。不可比或无有效质量结论的用例不参与该比例，请结合全量运行健康指标查看评测覆盖率与错误数。
+            </p>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table aria-label="Baseline 与 Candidate 聚合指标对比" className="min-w-full divide-y divide-border text-left text-xs">
                 <thead className="bg-canvas text-muted-foreground">

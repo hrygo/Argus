@@ -218,6 +218,116 @@ describe("ComparisonReport", () => {
     </MemoryRouter>,
   );
 
+  it("labels the comparable-cohort ratio as quality pass rate and explains its denominator", async () => {
+    // Issue #45: the comparable-cohort ratio is a quality metric over the shared
+    // comparable cases, not the live all-cases quality ratio shown on the detail
+    // header and not an execution success rate. It must say so explicitly.
+    renderReport();
+
+    await waitFor(() => {
+      expect(screen.getByText("共同可比样本质量（8 个 Case）")).toBeInTheDocument();
+    });
+
+    // The cohort table row is renamed from the ambiguous "Pass Rate".
+    const cohortTable = screen.getByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
+    expect(within(cohortTable).getByText("质量通过率 (Quality Pass Rate)")).toBeInTheDocument();
+    expect(within(cohortTable).queryByText("Pass Rate")).not.toBeInTheDocument();
+
+    // Values stay exactly as the API reported them.
+    expect(within(cohortTable).getByText("100.0%")).toBeInTheDocument();
+    expect(within(cohortTable).getByText("80.0%")).toBeInTheDocument();
+
+    // The denominator rule is stated in always-visible text.
+    const help = screen.getByTestId("comparable-quality-pass-rate-help");
+    expect(help).toHaveTextContent("仅统计双方共同可比样本");
+    expect(help).toHaveTextContent("执行成功、评测成功且质量结论为 PASS 或 FAIL");
+    expect(help).toHaveTextContent("不可比或无有效质量结论的用例不参与该比例");
+    expect(help).toHaveTextContent("全量运行健康指标");
+  });
+
+  it("does not render a fabricated 0% when the comparable cohort has no evaluable case", async () => {
+    // aggregate_run returns pass_rate=null when no case has a comparable quality
+    // verdict. That must stay visibly absent, never collapse to 0%.
+    (api.GET as any).mockImplementation((path: string, options: any) => {
+      const launchId = options.params.path.launch_id;
+      if (path.endsWith("/summary")) {
+        return Promise.resolve({ data: summaryFor("candidate-snapshot", launchId) });
+      }
+      if (path.includes("/baselines")) {
+        return Promise.resolve({ error: {}, response: { status: 404 } });
+      }
+      if (path.endsWith("/comparison")) {
+        const page = comparisonPage(options.params.query.snapshot_id, "case-1", null, launchId);
+        return Promise.resolve({
+          data: {
+            ...page,
+            summary: {
+              ...page.summary,
+              comparable_case_count: 0,
+              comparable_cohort: {
+                baseline: metrics({ pass_rate: null, evaluated_cases: 0 }),
+                candidate: metrics({ pass_rate: null, evaluated_cases: 0 }),
+              },
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: null });
+    });
+
+    renderReport();
+
+    await waitFor(() => {
+      expect(screen.getByText("共同可比样本质量（0 个 Case）")).toBeInTheDocument();
+    });
+
+    const cohortTable = screen.getByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
+    const passRateRow = within(cohortTable).getByText("质量通过率 (Quality Pass Rate)").closest("tr");
+    expect(passRateRow).not.toBeNull();
+    // The absent value renders as a placeholder, never as a measured zero.
+    expect(passRateRow).toHaveTextContent("—");
+    expect(passRateRow).not.toHaveTextContent("0.0%");
+  });
+
+  it("shows the no-comparable-sample notice instead of an empty quality table", async () => {
+    (api.GET as any).mockImplementation((path: string, options: any) => {
+      const launchId = options.params.path.launch_id;
+      if (path.endsWith("/summary")) {
+        return Promise.resolve({ data: summaryFor("candidate-snapshot", launchId) });
+      }
+      if (path.includes("/baselines")) {
+        return Promise.resolve({ error: {}, response: { status: 404 } });
+      }
+      if (path.endsWith("/comparison")) {
+        const page = comparisonPage(options.params.query.snapshot_id, "case-1", null, launchId);
+        return Promise.resolve({
+          data: {
+            ...page,
+            summary: {
+              ...page.summary,
+              comparable_case_count: 0,
+              comparable_cohort: null,
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: null });
+    });
+
+    renderReport();
+
+    await waitFor(() => {
+      expect(screen.getByText("无可比样本，质量差异未计算。")).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" })
+    ).not.toBeInTheDocument();
+    // The full-run health table is independent of cohort comparability.
+    expect(
+      screen.getByRole("table", { name: "Baseline 与 Candidate 全量运行健康指标" })
+    ).toBeInTheDocument();
+  });
+
   it("pins the first revision in the URL and sends it on every comparison page", async () => {
     renderReport();
 
