@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Plus, Layers } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
 import { FieldHelp } from "../../components/FieldHelp";
+import { Button, Field, TextArea, TextInput } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
 import { AGENT_VERSION_FIELD_HELPS } from "./helpDocs";
+
+const FORM_ID = "create-version-form";
 
 interface CreateVersionDialogProps {
   agentId: string;
@@ -33,6 +37,13 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
   const [environment, setEnvironment] = useState("staging");
   const [requestMappingStr, setRequestMappingStr] = useState('{"query": "input.user_message"}');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Per-field messages, because the form-level banner cannot say which
+  // control is wrong. See `Field`'s `error` prop.
+  const [fieldErrors, setFieldErrors] = useState<{
+    version?: string;
+    endpoint?: string;
+  }>({});
+  const formRef = useRef<HTMLFormElement>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -83,187 +94,247 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
     },
   });
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!version.trim() || !endpoint.trim()) {
+    const next: typeof fieldErrors = {};
+    if (!version.trim()) next.version = "版本号为必填项。";
+    if (!endpoint.trim()) next.endpoint = "远程调用端点为必填项。";
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) {
       setErrorMsg("请填写版本号与远程 HTTP 端点");
       return;
     }
     mutation.mutate();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-surface rounded-xl shadow-xl border border-border w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2 text-foreground">
-            <Layers className="w-5 h-5 text-primary" />
-            <h2 className="text-base font-bold">创建 AgentVersion 规格快照</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground-secondary rounded-lg p-1 hover:bg-surface-muted transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+  // Focus lands here rather than inside the submit handler: `aria-invalid` is
+  // only in the DOM once React has committed the new field errors, so querying
+  // for it during the submit finds nothing.
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return;
+    formRef.current
+      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      ?.focus();
+  }, [fieldErrors]);
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title="创建 AgentVersion 规格快照"
+      icon={<Layers aria-hidden="true" className="w-5 h-5 text-primary" />}
+      // A half-written version snapshot must not be abandoned mid-flight.
+      dismissable={!mutation.isPending}
+      className="sm:max-w-modal-lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button type="submit" form={FORM_ID} disabled={mutation.isPending}>
+            <Plus aria-hidden="true" className="w-4 h-4" />
+            <span>{mutation.isPending ? "创建中..." : "确认创建版本"}</span>
+          </Button>
+        </>
+      }
+    >
+        <form
+          id={FORM_ID}
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className="p-6 space-y-4"
+        >
           {errorMsg && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+            <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-foreground-secondary">
-                  版本号 (Tag) <span className="text-rose-500">*</span>
-                </label>
-                <FieldHelp {...AGENT_VERSION_FIELD_HELPS.version} />
-              </div>
-              <input
-                type="text"
-                required
-                placeholder="e.g. 1.0.0 或 v2"
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                className="ui-control w-full text-sm font-mono"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">创建后将永久冻结且不可变</p>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-foreground-secondary">运行环境</label>
-                <FieldHelp {...AGENT_VERSION_FIELD_HELPS.environment} placement="bottom-right" />
-              </div>
-              <input
-                type="text"
-                placeholder="e.g. production / staging"
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value)}
-                className="ui-control w-full text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <label className="text-xs font-semibold text-foreground-secondary">
-                远程调用端点 (HTTP POST) <span className="text-rose-500">*</span>
-              </label>
-              <FieldHelp {...AGENT_VERSION_FIELD_HELPS.endpoint} />
-            </div>
-            <input
-              type="url"
+            <Field
+              label="版本号 (Tag)"
               required
-              placeholder="http://agent-host:8080/invoke"
-              value={endpoint}
-              onChange={(e) => setEndpoint(e.target.value)}
-              className="ui-control w-full text-sm font-mono"
-            />
+              labelSuffix={<FieldHelp {...AGENT_VERSION_FIELD_HELPS.version} />}
+              hint="创建后将永久冻结且不可变"
+              error={fieldErrors.version}
+            >
+              {({ id, ...aria }) => (
+                <TextInput
+                  {...aria}
+                  id={id}
+                  type="text"
+                  required
+                  placeholder="e.g. 1.0.0 或 v2"
+                  value={version}
+                  onChange={(e) => {
+                    setVersion(e.target.value);
+                    if (fieldErrors.version) {
+                      setFieldErrors((prev) => ({ ...prev, version: undefined }));
+                    }
+                  }}
+                  className="w-full text-sm font-mono"
+                />
+              )}
+            </Field>
+
+            <Field
+              label="运行环境"
+              labelSuffix={
+                <FieldHelp {...AGENT_VERSION_FIELD_HELPS.environment} placement="bottom-right" />
+              }
+            >
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  type="text"
+                  placeholder="e.g. production / staging"
+                  value={environment}
+                  onChange={(e) => setEnvironment(e.target.value)}
+                  className="w-full text-sm"
+                />
+              )}
+            </Field>
           </div>
+
+          <Field
+            label="远程调用端点 (HTTP POST)"
+            required
+            labelSuffix={<FieldHelp {...AGENT_VERSION_FIELD_HELPS.endpoint} />}
+            error={fieldErrors.endpoint}
+          >
+            {({ id, ...aria }) => (
+              <TextInput
+                {...aria}
+                id={id}
+                type="url"
+                required
+                placeholder="http://agent-host:8080/invoke"
+                value={endpoint}
+                onChange={(e) => {
+                  setEndpoint(e.target.value);
+                  if (fieldErrors.endpoint) {
+                    setFieldErrors((prev) => ({ ...prev, endpoint: undefined }));
+                  }
+                }}
+                className="w-full text-sm font-mono"
+              />
+            )}
+          </Field>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1">超时时间 (秒)</label>
-              <input
-                type="number"
-                min={1}
-                max={600}
-                value={timeoutSeconds}
-                onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
-              />
-            </div>
+            <Field label="超时时间 (秒)">
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  type="number"
+                  min={1}
+                  max={600}
+                  value={timeoutSeconds}
+                  onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
+                  className="w-full font-mono"
+                />
+              )}
+            </Field>
 
-            <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1">最大重试次数</label>
-              <input
-                type="number"
-                min={0}
-                max={10}
-                value={maxRetries}
-                onChange={(e) => setMaxRetries(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
-              />
-            </div>
+            <Field label="最大重试次数">
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={maxRetries}
+                  onChange={(e) => setMaxRetries(Number(e.target.value))}
+                  className="w-full font-mono"
+                />
+              )}
+            </Field>
 
-            <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1">最大并发数</label>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={maxConcurrency}
-                onChange={(e) => setMaxConcurrency(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
-              />
-            </div>
+            <Field label="最大并发数">
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={maxConcurrency}
+                  onChange={(e) => setMaxConcurrency(Number(e.target.value))}
+                  className="w-full font-mono"
+                />
+              )}
+            </Field>
 
-            <div>
-              <label className="block text-xs font-semibold text-foreground-secondary mb-1">每分钟限流 (RPM)</label>
-              <input
-                type="number"
-                min={1}
-                max={10000}
-                value={rateLimitPerMinute}
-                onChange={(e) => setRateLimitPerMinute(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm border border-border-strong rounded-lg font-mono"
-              />
-            </div>
+            <Field label="每分钟限流 (RPM)">
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={rateLimitPerMinute}
+                  onChange={(e) => setRateLimitPerMinute(Number(e.target.value))}
+                  className="w-full font-mono"
+                />
+              )}
+            </Field>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-foreground-secondary">凭据引用 (SecretRef)</label>
-                <FieldHelp {...AGENT_VERSION_FIELD_HELPS.credentialRef} />
-              </div>
-              <input
-                type="text"
-                placeholder="env://API_TOKEN 或 vault://path"
-                value={credentialRef}
-                onChange={(e) => setCredentialRef(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-border-strong rounded-lg font-mono"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">仅存储引用标识，禁止存入明文 Secret</p>
-            </div>
+            <Field
+              label="凭据引用 (SecretRef)"
+              labelSuffix={<FieldHelp {...AGENT_VERSION_FIELD_HELPS.credentialRef} />}
+              hint="仅存储引用标识，禁止存入明文 Secret"
+            >
+              {({ id, ...aria }) => (
+                <TextInput
+                  {...aria}
+                  id={id}
+                  type="text"
+                  placeholder="env://API_TOKEN 或 vault://path"
+                  value={credentialRef}
+                  onChange={(e) => setCredentialRef(e.target.value)}
+                  className="w-full font-mono"
+                />
+              )}
+            </Field>
 
-            <div>
-              <div className="flex items-center gap-1.5 mb-1">
-                <label className="text-xs font-semibold text-foreground-secondary">产物标识 (ArtifactRef)</label>
+            <Field
+              label="产物标识 (ArtifactRef)"
+              labelSuffix={
                 <FieldHelp {...AGENT_VERSION_FIELD_HELPS.artifactRef} placement="bottom-right" />
-              </div>
-              <input
-                type="text"
-                placeholder="git commit SHA 或 docker image digest"
-                value={artifactRef}
-                onChange={(e) => setArtifactRef(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-border-strong rounded-lg font-mono"
-              />
-            </div>
+              }
+            >
+              {({ id }) => (
+                <TextInput
+                  id={id}
+                  type="text"
+                  placeholder="git commit SHA 或 docker image digest"
+                  value={artifactRef}
+                  onChange={(e) => setArtifactRef(e.target.value)}
+                  className="w-full font-mono"
+                />
+              )}
+            </Field>
           </div>
 
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <label className="text-xs font-semibold text-foreground-secondary">请求映射关系 (Request Mapping JSON)</label>
+          <Field
+            label="请求映射关系 (Request Mapping JSON)"
+            labelSuffix={
               <FieldHelp {...AGENT_VERSION_FIELD_HELPS.requestMapping} placement="top-left" />
-            </div>
-            <textarea
-              rows={3}
-              value={requestMappingStr}
-              onChange={(e) => setRequestMappingStr(e.target.value)}
-              className="ui-control w-full text-xs font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              点路径映射关系，例如：{`{"query": "input.user_message"}`}
-            </p>
-          </div>
+            }
+            hint={`点路径映射关系，例如：${'{"query": "input.user_message"}'}`}
+          >
+            {({ id, ...aria }) => (
+              <TextArea
+                {...aria}
+                id={id}
+                rows={3}
+                value={requestMappingStr}
+                onChange={(e) => setRequestMappingStr(e.target.value)}
+                className="w-full text-xs font-mono"
+              />
+            )}
+          </Field>
 
           <div className="flex items-center gap-2 pt-1">
             <input
@@ -278,25 +349,7 @@ export const CreateVersionDialog: React.FC<CreateVersionDialogProps> = ({
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{mutation.isPending ? "创建中..." : "确认创建版本"}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };

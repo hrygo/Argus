@@ -2,11 +2,12 @@
 
 > **企业级 AI Agent 低侵入评测与质量门禁平台**
 >
-> 将 Agent 评测从“每个应用仓库里的测试脚本”升级为统一、可复现、可治理的平台能力。
+> 把 Agent 评测从"每个应用仓库里的测试脚本"升级为统一、可复现、可治理的平台能力。
 
-Argus 面向企业内部多团队、多语言、多 Agent Framework 的统一评测场景。项目基于 Langfuse 已有的 Dataset、Trace、Observation、Experiment 和 Score 能力，补齐 **Agent Registry、版本化评测、远程执行、企业治理与 Release Gate** 等执行控制面能力。
+[![CI](https://github.com/miniceM/Argus/actions/workflows/ci.yml/badge.svg)](https://github.com/miniceM/Argus/actions/workflows/ci.yml)
+[![Langfuse i18n](https://github.com/miniceM/Argus/actions/workflows/langfuse-i18n.yml/badge.svg)](https://github.com/miniceM/Argus/actions/workflows/langfuse-i18n.yml)
 
-Argus 的核心边界是：
+Argus 在 [Langfuse](https://langfuse.com/) 已有的 Dataset / Trace / Observation / Experiment / Score 之上，补齐 **Agent Registry、版本化评测、远程执行与发布门禁** 这层执行控制面。业务 Agent 保持正常业务 API，不引入任何评测 SDK。
 
 ```text
 Langfuse = Dataset / Trace / Observation / Experiment / Score 的 System of Record
@@ -14,47 +15,72 @@ Argus    = Agent Registry / Versioned Launch / Remote Execution / Evaluation Orc
 Agent    = 正常业务应用，不感知 Evaluation Framework
 ```
 
-> 当前仓库已经进入 **Platform MVP 持续演进阶段**，不再定位为 PoC 测试工程。仓库中的 Demo Agent、示例 Dataset 和本地 Docker Compose 主要用于开发、回归测试和端到端验证，不代表 Argus 的产品边界。
+> 本文面向**使用 Argus 的读者**：只想跑起来、评估它是否适合自己的团队，先看下面两节即可。
+> 需要读代码、改代码或参与开发，请直接看 [AGENTS.md](./AGENTS.md) 与 [TECHNICAL_DESIGN.md](./TECHNICAL_DESIGN.md)。
 
 ---
 
-## 1. 为什么需要 Argus
+## 快速开始
 
-传统 Agent 评测通常把 Dataset Runner、Evaluator、Judge 配置和 CI 逻辑放进每个 Agent 仓库：
+### 环境要求
 
-```text
-Agent Repo
-├── production code
-├── eval.py / Eval SDK
-├── dataset loader
-├── judge config
-└── CI evaluation logic
+| 依赖 | 版本 | 用途 |
+|---|---|---|
+| Docker Engine / Docker Desktop + Compose v2 | 建议 ≥ 8 GB 可用内存 | 本地 Langfuse、PostgreSQL、Redis、Runner、Console |
+| Python | 3.12 | 源码方式运行 Eval Runner / 本地质量门禁 |
+| Node.js + pnpm | Node 22（CI 固定 pnpm 10.5.2） | Argus Console |
+| `make`、`curl` | — | 环境编排与演示脚本 |
+
+### 五分钟跑通一次完整评测
+
+```bash
+git clone https://github.com/miniceM/Argus.git
+cd Argus
+
+make up        # 构建并启动 Langfuse + Argus Runner + Console + Demo Agent
+make demo      # 等待就绪 → 导入 Demo Registry → 跑 v1 / v2 回归
 ```
 
-当 Agent 数量、团队数量和技术栈增长后，这种方式会带来：
+`make demo` 会输出两个 Experiment 的结果 JSON，并把 Trace / Score 写入 Langfuse。完整演示流程见 [walkthrough.md](./walkthrough.md)。
 
-- 评测 SDK 和业务代码强耦合；
+| 服务 | 地址 |
+|---|---|
+| Argus Console | http://localhost:18083 |
+| Eval Runner API | http://localhost:18080 |
+| FastAPI / OpenAPI Docs | http://localhost:18080/docs |
+| Langfuse | http://localhost:3000 |
+| Demo Agent v1 / v2 | http://localhost:18081 / http://localhost:18082 |
+
+Langfuse 演示账号：`admin@example.com` / `Poc-Admin-2026!`（仅本地 PoC 环境，凭据见 `.env.poc`）。
+
+```bash
+make down      # 停止
+make clean     # 停止并删除本地 Volume
+```
+
+---
+
+## 为什么需要 Argus
+
+把评测放进每个 Agent 仓库，随着团队和 Agent 数量增长会遇到：
+
+- 评测 SDK 与业务代码强耦合；
 - timeout、retry、并发、rate limit 等执行逻辑重复建设；
-- Dataset、Evaluator、Baseline 和 Score 缺乏统一版本治理；
+- Dataset、Evaluator、Baseline、Score 缺乏统一版本治理；
 - 测试调用路径可能偏离真实生产 API；
-- Java、Python、Node 以及不同 Agent Framework 需要分别适配；
+- Java、Python、Node 及不同 Agent Framework 需要分别适配；
 - 很难形成统一、可审计的发布质量门禁。
 
-Argus 将这些能力上移到统一的平台控制面：
+Argus 把这些能力上移到统一控制面：
 
 ```text
 Dataset
    │
    ▼
-Experiment Launch
-   │
-   ├─ freeze Dataset Version
-   ├─ freeze Agent Version
-   ├─ freeze Evaluator Version
-   └─ freeze Runner Version
+Experiment Launch ── freeze Dataset / Agent / Evaluator / Runner Version
    │
    ▼
-Remote Agent Runner ── W3C Trace Context ──► Business Agent
+Remote Agent Runner ── W3C Trace Context ──► 业务 Agent
    │
    ├─ Retry / Timeout / Rate Limit
    ├─ Item Execution / Attempt
@@ -64,496 +90,129 @@ Remote Agent Runner ── W3C Trace Context ──► Business Agent
 
 ---
 
-## 2. 核心设计原则
+## 核心概念
 
-### 2.1 业务 Agent 零 Evaluation SDK 侵入
+| 对象 | 一句话 |
+|---|---|
+| `AgentDefinition` | 一个可被评测的 Agent 身份 |
+| `AgentVersion` | 该 Agent 的不可变可执行快照：Endpoint、协议、Request Mapping、执行策略、Credential 引用 |
+| `ExperimentLaunch` | 一次可审计的评测请求，冻结 Dataset / Agent / Evaluator / Runner 四个版本 |
+| `ExperimentItemExecution` / `ExecutionAttempt` | 单个 Dataset Item 的逻辑执行与技术重试分离，重试不会被算成多个样本 |
+| `Baseline` | 一次完成结果，可绑定为后续 Candidate 的比较基准 |
 
-被测 Agent 只需要提供正常业务 API，例如：
+字段、状态机与 API 语义见 [TECHNICAL_DESIGN.md](./TECHNICAL_DESIGN.md)。
 
-```http
-POST /api/v1/invoke
-Content-Type: application/json
-```
+### 接入自己的 Agent
 
-Agent 不需要：
+1. 用 `POST /api/v1/agents` 注册 Agent，再用 `POST /api/v1/agent-versions` 登记一个不可变版本（Endpoint、协议、Request Mapping、执行策略、Credential 引用）；
+2. 准备 Langfuse Dataset，创建 `POST /api/v1/experiment-launches`（可选 `POST /api/v1/experiment-launches/run` 立即异步执行）；
+3. 用 `GET /api/v1/experiment-launches/{id}/summary` 与 `/comparison` 查看结果，并在 Console 或 Langfuse 中分析 Trace 与 Score。
 
-- 引入 Langfuse Evaluation SDK；
-- 引入 Argus Evaluation SDK；
-- 读取 Dataset；
-- 自己运行 Evaluator；
-- 为“当前正在评测”增加业务分支。
+完整请求 / 响应结构以 [docs/openapi.json](./docs/openapi.json) 与运行时 `/docs` 为准；`services/demo-agent/` 是最小可运行参考实现。
 
-如果 Agent 已经使用 OpenTelemetry，可以通过标准 W3C `traceparent` 将内部 LLM / Tool Span 与评测 Trace 关联；这属于可观测性增强，而不是运行基础评测的前置条件。
+### 四条设计边界
 
-### 2.2 Langfuse 与 Argus 职责分离
-
-Argus 不重复实现 Langfuse 已经成熟的数据模型和分析 UI。
-
-- **Langfuse**：Dataset、Trace、Observation、Experiment、Score、Compare、Annotation。
-- **Argus**：Agent Registry、版本快照、远程执行、状态机、企业策略与发布门禁。
-
-### 2.3 评测必须可复现
-
-正式评测必须能够确定至少四个版本：
-
-```text
-Dataset Version
-Agent Version
-Evaluator Version
-Runner Version
-```
-
-Argus 在创建 Experiment Launch 时生成冻结 Manifest，避免运行过程中因“latest”漂移而失去复现能力。
-
-### 2.4 Evaluation Context 不污染业务 DTO
-
-评测上下文优先通过标准 Trace Context 和 HTTP Header 传递：
-
-```http
-traceparent: ...
-X-Eval-Launch-Id: ...
-X-Eval-Dataset-Item-Id: ...
-X-Eval-Agent-Version: ...
-```
-
-Dataset 到 Agent 请求体的转换由 AgentVersion 中的 Request Mapping 定义。
+1. **业务 Agent 零 Evaluation SDK 侵入**：Agent 只需提供正常业务 API，不读取 Dataset、不自行计算 Score、不为"正在评测"加分支。
+2. **Langfuse 与 Argus 职责分离**：Argus 不重复实现 Langfuse 已成熟的数据模型与分析 UI。
+3. **评测必须可复现**：正式 Experiment 必须能确定 Dataset / Agent / Evaluator / Runner 四个版本，禁止只记录 `latest`。
+4. **评测上下文不污染业务 DTO**：通过标准 W3C `traceparent` 与 `X-Eval-*` Header 传递；Agent 已有 OpenTelemetry 时可继续向下游关联。
 
 ---
 
-## 3. 当前已实现能力
+## 能力概览
 
-截至当前 `main`，Argus 已具备 Platform MVP 的第一阶段核心能力：
+### 已实现
 
-### Agent Registry
+| 能力域 | 内容 |
+|---|---|
+| Agent Registry | PostgreSQL 持久化 `AgentDefinition` / `AgentVersion`；不可变版本；只保存 `credentialRef` |
+| Versioned Launch | 四维冻结 Manifest、Dataset 版本与内容校验、Idempotency-Key 与冲突检测、Launch 生命周期持久化 |
+| Remote Runner | `SYNC_HTTP` 调用、Request Mapping、timeout / retry / rate limit、W3C Trace Context 注入、逐次 Attempt 记录 |
+| 异步执行 | Redis Streams 队列 + Worker、可靠执行状态机、`cancel` / `resume` / `retry-failed`、分布式限流 |
+| 评测与对比 | 确定性 item-level Evaluator、Run-level 汇总与 Score、Baseline 绑定、Candidate 对比（含单用例） |
+| Console | React + TypeScript 控制台：Agent、Launch、Evaluator、对比视图 |
+| 界面语言 | 官方 Langfuse 的独立 `zh-CN` Patch Layer 镜像 |
 
-- PostgreSQL 持久化的 `AgentDefinition` / `AgentVersion`；
-- 同一 Agent 支持多个不可变版本；
-- AgentVersion 可独立定义 Endpoint、Protocol、Request Mapping、Schema 和 Execution Policy；
-- 支持版本归档；
-- Credential 仅保存 `credentialRef`，不在 Registry 中保存明文 Secret；
-- 对不受支持的 Credential Reference 采用显式拒绝策略。
-
-### Versioned Experiment Launch
-
-- 持久化 `ExperimentLaunch`；
-- Dataset / Agent / Evaluator / Runner 四维冻结 Manifest；
-- Dataset 版本与内容快照校验；
-- Evaluator Registry 与 Evaluator Snapshot；
-- Idempotency-Key 与冲突检测；
-- Launch 生命周期持久化；
-- Item Execution 与 Execution Attempt 持久化；
-- execution failure 与 evaluation failure 分离；
-- 质量结论采用 fail-closed / unknown-safe 语义，避免无 Evaluator 时产生误判。
-
-### Remote Evaluation Runner
-
-- `SYNC_HTTP` Remote Agent 调用；
-- Request Mapping；
-- timeout / retry / rate limit；
-- AgentVersion 并发策略继承；
-- W3C Trace Context 注入；
-- 每次 Attempt 的 HTTP 状态、错误、延迟与 Trace 接收状态记录；
-- deterministic item-level Evaluator；
-- Langfuse Experiment / Trace / Observation / Score 集成。
-
-### 工程质量
-
-- Ruff 代码质量检查；
-- Python 全量测试与 branch coverage；
-- Docker / Compose 校验；
-- Langfuse Cloud E2E；
-- OpenAPI 快照与 drift check；
-- CI Artifact 保留失败现场和 E2E 结果。
-
----
-
-## 4. 当前阶段与 Roadmap
-
-Argus 正在按企业级平台路线持续演进：
+### Roadmap
 
 | 阶段 | 主题 | 状态 |
 |---|---|---|
 | S1 | Agent Registry 与版本化评测领域模型 | ✅ 已完成 |
 | S1.5 | 官方 Langfuse + 独立 i18n Patch Layer | ✅ 已完成 |
-| S2 | 异步 Orchestrator、Queue / Worker、可靠执行状态机 | 🚧 Roadmap |
-| S3 | 版本化评测、Baseline Comparison、Run-level Score | 🚧 Roadmap |
-| S4 | Standard Agent Trajectory、Trace Assembler、深度轨迹评测 | 🚧 Roadmap |
-| S5 | Vault、RBAC、SSO、Audit、数据脱敏 | 🚧 Roadmap |
-| S6 | ReleasePolicy、Release Gate、CLI、CI/CD 集成 | 🚧 Roadmap |
+| S2 | 异步 Orchestrator、Queue / Worker、可靠执行状态机 | ✅ 已完成 |
+| S3 | 版本化评测、Baseline Comparison、Run-level Score | ✅ 已完成 |
+| S4 | Standard Agent Trajectory、Trace Assembler、深度轨迹评测 | 🚧 规划中 |
+| S5 | Vault、RBAC、SSO、Audit、数据脱敏 | 🚧 规划中 |
+| S6 | ReleasePolicy、Release Gate、CLI、CI/CD 集成 | 🚧 规划中 |
 
-目标里程碑：
-
-- **v0.2 Platform MVP**：支持内部多 Agent 团队试点；
-- **v1.0 Enterprise Agent Evaluation Platform**：形成企业统一 Agent 质量基础设施。
-
-详细计划见 [Roadmap Issue #1](https://github.com/miniceM/Argus/issues/1)。
+当前版本仍不是完整的 v1.0 企业平台；尚未覆盖 LLM-as-a-Judge 版本治理、Agent Trajectory、Worker 独立扩缩容、SSO / RBAC、Release Gate 等能力。路线图见 [Roadmap Issue #1](https://github.com/miniceM/Argus/issues/1)。
 
 ---
 
-## 5. 总体架构
-
-```mermaid
-flowchart TB
-    subgraph LF[Langfuse - Evaluation System of Record]
-        DS[Dataset / Version]
-        TR[Trace / Observation]
-        EX[Experiment / Compare]
-        SC[Score / Annotation]
-    end
-
-    subgraph ARGUS[Argus - Evaluation Control & Execution Plane]
-        AR[Agent Registry]
-        EL[Experiment Launch]
-        MF[Frozen Manifest]
-        RR[Remote Agent Runner]
-        EV[Evaluator Registry]
-        AR --> EL
-        EV --> EL
-        EL --> MF --> RR
-    end
-
-    subgraph AGENT[Business Agent Runtime]
-        A1[Agent Endpoint]
-        LLM[LLM / Tool / Workflow]
-        A1 --> LLM
-    end
-
-    DS --> EL
-    RR -->|HTTP + traceparent| A1
-    RR --> TR
-    RR --> EX
-    RR --> SC
-    A1 -. optional OpenTelemetry .-> TR
-```
-
-逻辑上分为三层：
-
-1. **评测资产与结果层**：Langfuse；
-2. **评测控制与远程执行层**：Argus；
-3. **业务 Agent Runtime**：现有业务服务，无评测框架侵入。
-
----
-
-## 6. 核心领域模型
-
-### AgentDefinition
-
-描述一个可被 Argus 管理和评测的 Agent。
-
-### AgentVersion
-
-描述某个不可变、可执行的 Agent 版本，包括：
-
-- Endpoint / Protocol；
-- Request / Response Schema；
-- Request Mapping；
-- Execution Policy；
-- Credential Reference；
-- Artifact / Environment Metadata；
-- Trace Propagation 配置。
-
-### ExperimentLaunch
-
-描述一次可审计评测请求，并冻结：
-
-- Dataset；
-- AgentVersion；
-- Evaluator；
-- Runner；
-- 执行策略与 Idempotency 信息。
-
-### ExperimentItemExecution / ExecutionAttempt
-
-将单个 Dataset Item 的逻辑执行与技术重试分离：
+## 架构一览
 
 ```text
-ExperimentLaunch
-└─ ExperimentItemExecution
-   ├─ Attempt #1
-   ├─ Attempt #2
-   └─ Final Attempt
-```
-
-这样 Retry 不会被错误地统计成多个独立测试样本。
-
----
-
-## 7. 快速开始
-
-### 环境要求
-
-- Docker Engine / Docker Desktop
-- Docker Compose v2
-- 建议至少 8 GB 可用内存
-- Python 3
-- `curl`
-
-### 本地开发与端到端演示
-
-仓库保留了一套自包含的本地环境，用于开发和回归验证：
-
-```bash
-make validate
-make up
-make ps
-make demo
-```
-
-服务地址：
-
-- Argus Eval Runner: `http://localhost:18080`
-- FastAPI / OpenAPI Docs: `http://localhost:18080/docs`
-- Langfuse: `http://localhost:3000`
-
-Console 侧边栏的 Langfuse Dashboard 链接使用 `ARGUS_LANGFUSE_DASHBOARD_URL`。本地 Compose 未单独配置时沿用 `NEXTAUTH_URL`；若浏览器访问地址不同，请在 `.env.poc` 中设置该变量。这个浏览器 UI 地址与 Runner 在容器网络内使用的 `LANGFUSE_BASE_URL` 可以不同。远程访问时请配置浏览器实际可达的域名或 IP，不要使用服务器侧的 `localhost`。地址中的 `/langfuse` 等路径前缀会原样保留；Langfuse 及反向代理的子路径部署仍需由部署配置支持。
-
-`make up` 会将当前 Git commit SHA 作为 Runner 镜像内的 `ARGUS_BUILD_ID`，并由 API 与 Worker 共用该镜像身份。通过其他方式构建或部署时，也必须将 `ARGUS_BUILD_ID` 设置为不可变、可定位的提交 SHA 或镜像摘要；空值及通用 `dev` / `latest` 身份不会被接受为正式 Launch。
-
-该变量由 Compose 在创建 Runner 容器时注入；修改配置后需要重新创建容器，单独执行 `docker compose restart` 不会更新容器环境变量。按所用部署方式执行：
-
-```bash
-# 本地全栈（读取 .env.poc）
-docker compose --env-file .env.poc up -d --force-recreate eval-runner
-
-# Langfuse Cloud（读取 .env.cloud）
-docker compose -f docker-compose.cloud.yml --env-file .env.cloud up -d --force-recreate eval-runner
-```
-
-无需重新构建 Console。
-
-使用 Langfuse Cloud 时，在 `.env.cloud` 中同时配置 `LANGFUSE_BASE_URL`（Runner API 地址）和 `ARGUS_LANGFUSE_DASHBOARD_URL`（浏览器 UI 地址），并确保 Dashboard URL 对应所选 Cloud 区域；示例见 [`.env.cloud.example`](./.env.cloud.example)。Cloud Compose 通过 `env_file` 将该配置传给 Runner。
-
-停止环境：
-
-```bash
-make down
-```
-
-清理本地 Volume：
-
-```bash
-make clean
-```
-
-> `.env.poc`、Demo Agent v1/v2 和示例 Dataset 只用于本地开发与 E2E。生产部署必须替换演示凭据，并按企业安全要求接入 Secret Manager、网络隔离、身份认证和审计能力。
-
-Langfuse Web 使用独立的 `zh-CN` Patch Layer 镜像。补丁只覆盖界面渲染、导航和语言切换，不改变 Dataset、Trace、Observation、Experiment、Score 或业务 API 契约。构建与部署说明见 [`deploy/langfuse/README.md`](./deploy/langfuse/README.md)。
-
----
-
-## 8. 核心 API
-
-Argus 当前提供版本化平台 API：
-
-### Agent Registry
-
-```text
-POST /api/v1/agents
-GET  /api/v1/agents?id=...
-
-POST /api/v1/agent-versions
-GET  /api/v1/agent-versions?agent_id=...&version=...
-POST /api/v1/agent-versions/archive
-```
-
-### Experiment Launch
-
-```text
-POST /api/v1/experiment-launches
-GET  /api/v1/experiment-launches?id=...
-
-GET  /api/v1/experiment-launch-items?launch_id=...
-GET  /api/v1/execution-attempts?item_execution_id=...
-```
-
-完整 API 合约见：
-
-- [docs/openapi.json](./docs/openapi.json)
-- 启动服务后的 `/docs`
-
-仓库仍保留 `/experiments/run` 等兼容/演示接口，用于现有 E2E 和迁移验证；新平台能力应优先使用 `/api/v1/*`。
-
----
-
-## 9. Demo Regression
-
-Demo Agent v1/v2 是一组固定的回归样例，用来验证 Argus 的远程评测链路，而不是项目本身的产品定位。
-
-示例 Dataset 包含 6 个金融场景，覆盖：
-
-- 意图识别；
-- Tool 选择；
-- 敏感信息保护；
-- 高风险场景升级人工；
-- 普通账户查询；
-- 卡片被盗冻结。
-
-当前固定回归基线：
-
-```text
-Agent v1: overall_pass = 2 / 6
-Agent v2: overall_pass = 6 / 6
-```
-
-该基线由自动化测试和 Langfuse Cloud E2E 保护，用于检测 Runner、Evaluator、Trace、Dataset 与基础设施回归。
-
-新建 Launch 默认采用**逐项诊断**：分别记录意图、工具调用、敏感信息和升级处理四项评分；全部已选指标达到阈值时，该用例质量结论为通过。也可以切换到**复合结论**，只记录 `overall_pass`；其组成的四项基线检查全部通过时，用例才通过。当前内置版本及默认阈值下，两种完整预设的通过条件等价，区别在于结果是否保留逐项评分明细。取消的诊断指标不参与本次质量判定；执行成功也不等同于质量通过。
-
----
-
-## 10. CI 与质量门禁
-
-仓库使用 `.github/workflows/ci.yml` 作为统一质量门禁：
-
-```text
-Code Quality
-    +
-Full Python Tests
-    +
-Docker / Compose Validation
-    ↓
-Langfuse Cloud E2E
-```
-
-建议 `main` Branch Protection 要求以下检查通过：
-
-- `Code Quality`
-- `Full Python Tests`
-- `Docker / Compose Validation`
-- `Langfuse Cloud E2E`
-
-`.github/workflows/langfuse-i18n.yml` 只在 `deploy/langfuse/**` 或该工作流自身发生变化时执行；也可以通过 `workflow_dispatch` 手动执行。Pull Request 会验证补丁、资源、类型检查、UI 测试并构建可加载的 `linux/amd64` smoke 镜像，但不会推送 GHCR。合并到 `main` 后，工作流使用 QEMU + Buildx 发布 `linux/amd64` 与 `linux/arm64` 多架构镜像到 `ghcr.io/minicem/argus-langfuse-i18n`，并生成不可变的 `4.38.0-i18n-<git-sha>` 标签。
-
-Cloud E2E 建议使用独立 Langfuse CI Project，并通过 GitHub Environment 管理：
-
-- `LANGFUSE_BASE_URL`
-- `LANGFUSE_PUBLIC_KEY`
-- `LANGFUSE_SECRET_KEY`
-
-Repository Variable：
-
-```text
-LANGFUSE_E2E_ENABLED=true
-```
-
-外部 fork PR 默认不应获得 Langfuse Secret。
-
-远程自托管验收固定使用完整 GHCR digest 和构建标识，避免只校验 URL 或漂移的 tag：
-
-```text
-LANGFUSE_I18N_IMAGE_DIGEST=ghcr.io/minicem/argus-langfuse-i18n@sha256:<registry-digest>
-LANGFUSE_I18N_BUILD_ID=argus-i18n-<git-sha>
-```
-
-验收脚本会读取 registry OCI config、检查运行中服务的 `/api/public/argus-image-identity`，并确认两者与预期 build ID 一致。私有 GHCR package 还需提供具备 `read:packages` 权限的 `LANGFUSE_GHCR_USERNAME` 和 `LANGFUSE_GHCR_TOKEN`；公开 package 可匿名查询。
-
----
-
-## 11. 仓库结构
-
-```text
-.
-├── Agents.md                     # AI / Coding Agent 工程规范
-├── README.md
-├── TECHNICAL_DESIGN.md           # 总体技术设计基线
-├── docker-compose.yml            # 本地 Langfuse + Argus + Demo 环境
-├── docker-compose.cloud.yml      # Langfuse Cloud E2E / 开发模式
-├── docs/
-│   └── openapi.json              # API 合约快照
-├── migrations/                   # Argus PostgreSQL Schema 迁移
-├── config/
-│   └── agents.yaml               # Demo / Bootstrap Registry 配置
-├── data/
-│   └── dataset.json              # Demo Regression Dataset
-├── services/
-│   ├── demo-agent/               # 无 Evaluation SDK 的业务 Agent 样例
-│   └── eval-runner/
-│       └── app/
-│           ├── api_registry.py
-│           ├── api_launches.py
-│           ├── registry.py
-│           ├── manifest.py
-│           ├── db.py
-│           ├── db_models.py
-│           ├── executor.py
-│           ├── dataset.py
-│           ├── evaluators.py
-│           └── security.py
-├── scripts/
-└── tests/
++----------------------------------------------------------------------------+
+| 业务 Agent Runtime   正常业务应用，不感知评测框架                          |
++----------------------------------------------------------------------------+
+| 只暴露正常业务 API，例如 POST /invoke                                      |
+| 不引入 Langfuse / Argus SDK，不读 Dataset，不自行评分                      |
++----------------------------------------------------------------------------+
+                            HTTP + W3C traceparent
+                                      ^
+                                      |
++----------------------------------------------------------------------------+
+| Argus 控制面   services/eval-runner                                        |
++----------------------------------------------------------------------------+
+| Agent Registry         Agent / 不可变 AgentVersion                         |
+| Experiment Launch      冻结 Dataset / Agent / Evaluator / Runner           |
+| Queue / Worker         状态机 / retry / cancel / resume                    |
+| Evaluator + Baseline   逐项评分 / 候选对比                                 |
++----------------------------------------------------------------------------+
+                  写入 Dataset / Trace / Experiment / Score
+                                      |
+                                      v
++----------------------------------------------------------------------------+
+| Langfuse   评测数据 System of Record                                       |
++----------------------------------------------------------------------------+
+| Dataset / Trace / Observation / Experiment / Score                         |
+| 提供专业分析 UI；Argus 不重复实现这些模型                                  |
++----------------------------------------------------------------------------+
 ```
 
 ---
 
-## 12. 当前边界
+## 文档导航
 
-当前 `main` 已经完成持久化 Registry 与版本化 Launch，但仍不是完整的 v1.0 企业平台。
+本文只保留上手必需的信息。深入细节按下表分流：
 
-尚在 Roadmap 中的关键能力包括：
-
-- durable async Orchestrator / Queue / Worker；
-- Cancel / Resume / failed-only rerun；
-- Baseline vs Candidate 自动比较；
-- LLM-as-a-Judge 的完整版本治理；
-- Standard Agent Trajectory 与 Trace Assembler；
-- Vault / KMS / Secret Manager 正式集成；
-- SSO / RBAC / Audit；
-- Dataset 审批与数据脱敏；
-- ReleasePolicy / Release Gate；
-- CLI 与 CI/CD 发布门禁集成；
-- 多租户配额、SLO 与平台运营能力。
-
-这些能力应在不破坏“业务 Agent 零 Evaluation SDK 侵入”和“Langfuse 作为评测数据 System of Record”两个核心边界的前提下持续演进。
+| 你想知道 | 去看 |
+|---|---|
+| 领域模型、状态机、API 设计细节 | [TECHNICAL_DESIGN.md](./TECHNICAL_DESIGN.md) |
+| 完整 API 合约 | [docs/openapi.json](./docs/openapi.json) 或运行时的 `/docs` |
+| 端到端演示流程 | [walkthrough.md](./walkthrough.md) |
+| Langfuse `zh-CN` 镜像构建与发布 | [deploy/langfuse/README.md](./deploy/langfuse/README.md) |
+| 最近一次验证记录 | [VALIDATION_REPORT.md](./VALIDATION_REPORT.md) |
+| 参与开发、代码规范、质量门禁 | [AGENTS.md](./AGENTS.md) |
+| 提交 PR 前要做什么 | [CONTRIBUTING.md](./CONTRIBUTING.md) |
+| 报告安全漏洞 | [SECURITY.md](./SECURITY.md) |
+| 阶段规划与里程碑 | [Roadmap Issue #1](https://github.com/miniceM/Argus/issues/1) |
 
 ---
 
-## 13. 设计与开发规范
+## 部署要点
 
-详细架构设计见：
-
-- [TECHNICAL_DESIGN.md](./TECHNICAL_DESIGN.md)
-
-仓库内 AI Agent / Coding Agent 的开发规范见：
-
-- [Agents.md](./Agents.md)
-
-所有重要功能开发、Bug 修复和重构应遵循：
-
-```text
-Issue / Design
-    ↓
-RED
-    ↓
-GREEN
-    ↓
-REFACTOR
-    ↓
-Target Tests
-    ↓
-make validate
-    ↓
-CI / E2E
-```
+- **本地环境**：`make up` 使用 `.env.poc` 中的演示凭据启动全栈，仅适用于开发与回归验证。
+- **构建身份**：`make up` 会把当前 Git commit SHA 作为 `ARGUS_BUILD_ID` 注入 Runner 镜像；自建镜像部署时必须设置不可变、可定位的 commit SHA 或镜像摘要，空值与 `dev` / `latest` 不会被接受为正式 Launch。
+- **Langfuse Cloud**：在 `.env.cloud` 中同时配置 API 地址（`LANGFUSE_BASE_URL`）与浏览器地址（`ARGUS_LANGFUSE_DASHBOARD_URL`），示例见 [`.env.cloud.example`](./.env.cloud.example)。
+- **生产部署**：必须替换演示凭据，并接入 Secret Manager、网络隔离、身份认证与审计能力。仓库内的 Demo Agent、示例 Dataset 与本地 Compose 不代表产品边界。
 
 ---
 
-## 14. 项目目标
+## 质量结论如何判定
 
-Argus 的最终目标不是“生成一次评测报告”，而是把 Agent 质量保障变成企业软件工程基础设施：
+新建 Launch 默认采用**逐项诊断**：分别记录意图、工具调用、敏感信息与升级处理四项评分。也可切换为**复合结论**，只记录一个 `overall_pass`。
 
-```text
-Production Observability
-        ↓
-Failure Mining
-        ↓
-Dataset Curation
-        ↓
-Offline Regression
-        ↓
-Release Gate
-        ↓
-Production Monitoring
-        ↺
-```
+**执行成功不等于质量通过**——Runner 跑完只是执行完成，是否放行由质量结论决定。未选择或被取消的诊断指标不参与本次判定；没有可用 Evaluator 时结论为 unknown，不会默认判通过。
 
-让不同团队、不同语言、不同 Agent Framework 共享同一套 Dataset、Evaluator、版本治理、回归评测、审计与发布标准，并让业务 Agent 始终保持对评测框架的低侵入甚至零侵入。
+仓库内置的回归基线与判定细节见 [AGENTS.md](./AGENTS.md)。

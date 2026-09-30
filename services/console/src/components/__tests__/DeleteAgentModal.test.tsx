@@ -273,7 +273,9 @@ describe("DeleteAgentModal UX and Strong Name Verification Flow", () => {
 
     const deleteButton = screen.getByRole("button", { name: "确认删除" });
     await waitFor(() => expect(deleteButton).toBeEnabled());
-    const form = deleteButton.closest("form");
+    // The submit button lives in the overlay footer, not inside the form;
+    // HTML's `form` attribute is what binds them.
+    const form = (deleteButton as HTMLButtonElement).form;
     expect(form).not.toBeNull();
 
     // Simulate another observer refreshing the shared cache immediately before
@@ -412,7 +414,10 @@ describe("DeleteAgentModal UX and Strong Name Verification Flow", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-labelledby", "delete-agent-title");
+    // Assert the behaviour, not the generated id: the accessible name is what
+    // a screen reader announces, and the id is an implementation detail of the
+    // overlay primitive.
+    expect(dialog).toHaveAccessibleName(/删除 Agent/);
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(handleClose).toHaveBeenCalledTimes(1);

@@ -1,16 +1,11 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  Clock,
-  Layers,
-  Network,
-  X,
-} from "lucide-react";
+import { AlertCircle, Clock, Layers, Network } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError } from "../../api/errors";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { EmptyState, ErrorState, LoadingState } from "../../components/StateViews";
+import { SideDrawer } from "../../components/ui/Overlay";
 
 type ExecutionAttempt = import("../../api/schema").components["schemas"]["ExecutionAttemptResponse"];
 
@@ -59,43 +54,22 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Slide-over panel */}
-      <div className="relative w-full max-w-xl bg-surface shadow-2xl z-10 flex flex-col h-full overflow-hidden">
-        {/* Drawer Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-canvas/75">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-primary" />
-            <div>
-              <h3 className="text-sm font-bold text-foreground">
-                用例执行调用历史 (Attempts Timeline)
-              </h3>
-              <p className="text-xs text-muted-foreground font-mono">Case ID: {caseId || itemExecutionId}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-muted-foreground hover:text-foreground-secondary rounded-lg hover:bg-surface-muted transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Drawer Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <SideDrawer
+      open={isOpen}
+      onClose={onClose}
+      title="用例执行调用历史 (Attempts Timeline)"
+      subtitle={`Case ID: ${caseId || itemExecutionId}`}
+      icon={<Layers aria-hidden="true" className="w-4 h-4 text-primary" />}
+    >
+      <div className="p-6 space-y-6">
           {isLoading && <LoadingState message="正在加载 Attempt 历史调用记录..." />}
           {error && <ErrorState message={formatApiError(error)} />}
 
           {!isLoading && !error && attempts && attempts.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground text-xs">
-              该用例暂无记录的调用 Attempt。
-            </div>
+            <EmptyState
+              title="暂无记录的调用 Attempt"
+              description="该用例尚未产生任何调用记录。若它本应被执行，请检查 Launch 的运行状态与执行策略。"
+            />
           )}
 
           {!isLoading && !error && attempts && attempts.length > 0 && (
@@ -117,17 +91,17 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
                           第 {attempt.attempt_no} 次调用尝试
                         </span>
                         {attempt.worker_id && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-muted text-foreground-secondary border border-border">
+                          <span className="px-2 py-0.5 rounded text-2xs font-mono bg-surface-muted text-foreground-secondary border border-border">
                             {attempt.worker_id}
                           </span>
                         )}
                         {attempt.request_phase && (
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                            className={`px-2 py-0.5 rounded text-2xs font-mono font-semibold ${
                               attempt.request_phase === "RESPONSE_RECEIVED"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                ? "bg-pass-subtle text-pass-strong border border-pass-border"
                                 : attempt.request_phase === "MAY_HAVE_BEEN_SENT"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                ? "bg-timeout-subtle text-timeout border border-timeout-border"
                                 : "bg-surface-muted text-foreground-secondary border border-border"
                             }`}
                           >
@@ -141,8 +115,8 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
                           <span
                             className={`px-2 py-0.5 rounded font-mono font-semibold ${
                               isSuccess
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-rose-50 text-rose-700 border border-rose-200"
+                                ? "bg-pass-subtle text-pass-strong border border-pass-border"
+                                : "bg-fail-subtle text-fail border border-fail-border"
                             }`}
                           >
                             HTTP {attempt.http_status}
@@ -162,14 +136,14 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
                     <div className="p-4 space-y-3 text-xs">
                       {/* Trace Context */}
                       <div>
-                        <span className="text-[11px] font-medium text-muted-foreground block mb-1 flex items-center gap-1">
+                        <span className="text-micro font-medium text-muted-foreground block mb-1 flex items-center gap-1">
                           <Network className="w-3 h-3 text-primary" />
                           跨系统调用跟踪 (W3C Trace Context)
                         </span>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-micro font-medium ${
                             attempt.trace_context_received
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              ? "bg-pass-subtle text-pass-strong border border-pass-border"
                               : "bg-surface-muted text-muted-foreground border border-border"
                           }`}
                         >
@@ -179,12 +153,12 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
 
                       {/* Ambiguous Outcome Alert */}
                       {attempt.error_type === "AMBIGUOUS_OUTCOME" && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 space-y-1">
+                        <div className="p-3 bg-timeout-subtle border border-timeout-border rounded-lg text-timeout-strong space-y-1">
                           <div className="flex items-center gap-1.5 font-bold text-xs">
-                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            <AlertCircle className="w-4 h-4 text-timeout" />
                             <span>非幂等请求结果未决 (AMBIGUOUS_OUTCOME)</span>
                           </div>
-                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                          <p className="text-micro text-timeout-strong leading-relaxed">
                             当前被测 Agent 标记为非幂等，且 Worker 在请求发送后或网络中断期间崩溃。为防资金或业务重复扣款，系统已安全熔断重试。需在详情页点击“重试失败用例”并勾选强制重放确认后方可重新执行。
                           </p>
                         </div>
@@ -192,16 +166,16 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
 
                       {/* Error Banner */}
                       {attempt.error_message && attempt.error_type !== "AMBIGUOUS_OUTCOME" && (
-                        <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-lg text-rose-800 space-y-1">
+                        <div className="p-3 bg-fail-subtle/80 border border-fail-border rounded-lg text-fail-strong space-y-1">
                           <div className="flex items-center gap-1.5 font-semibold">
-                            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                            <AlertCircle className="w-3.5 h-3.5 text-fail" />
                             <span>{attempt.error_type || "执行异常"}</span>
                           </div>
-                          <p className="font-mono text-[11px] whitespace-pre-wrap">{attempt.error_message}</p>
+                          <p className="font-mono text-micro whitespace-pre-wrap">{attempt.error_message}</p>
                         </div>
                       )}
 
-                      <div className="pt-2 text-[11px] text-muted-foreground flex items-center justify-between border-t border-border">
+                      <div className="pt-2 text-micro text-muted-foreground flex items-center justify-between border-t border-border">
                         <span>Attempt ID: {attempt.id}</span>
                         <span>{new Date(attempt.started_at).toLocaleString("zh-CN", { hour12: false })}</span>
                       </div>
@@ -211,8 +185,7 @@ export const AttemptDrawer: React.FC<AttemptDrawerProps> = ({
               })}
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </SideDrawer>
   );
 };

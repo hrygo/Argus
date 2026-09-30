@@ -50,7 +50,7 @@ export const SecretRef: React.FC<SecretRefProps> = ({ credentialRef, className =
         className="text-muted-foreground hover:text-foreground-secondary focus:outline-none cursor-pointer"
         title="复制引用"
       >
-        {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+        {copied ? <Check className="w-3 h-3 text-pass" /> : <Copy className="w-3 h-3" />}
       </button>
     </span>
   );

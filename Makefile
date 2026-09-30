@@ -45,5 +45,7 @@ console-build:
 console-test:
 	pnpm --dir services/console test
 
-console-e2e:
+# Playwright drives `vite preview`, which serves dist/. Without the build
+# first, the suite silently tests the previous bundle.
+console-e2e: console-build
 	pnpm --dir services/console test:e2e

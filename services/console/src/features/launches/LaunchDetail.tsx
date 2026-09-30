@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import clsx from "clsx";
 import {
   ArrowLeft,
   Bot,
@@ -27,6 +28,7 @@ import { ComparisonReport } from "./ComparisonReport";
 import { ACTIVE_LAUNCH_STATUSES, LaunchStatus } from "./LaunchesList";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Button, PageHeader, Panel, buttonClassName } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
 
 type LaunchResponse = import("../../api/schema").components["schemas"]["ExperimentLaunchResponse"];
 type ItemExecution = import("../../api/schema").components["schemas"]["ExperimentItemExecutionResponse"];
@@ -88,6 +90,100 @@ interface ManifestData {
   };
   created_at?: string;
 }
+
+type ProgressCounts = {
+  total: number;
+  pending: number;
+  queued: number;
+  running: number;
+  retry_wait: number;
+  succeeded: number;
+  failed: number;
+  timed_out: number;
+  cancelled: number;
+};
+
+interface ProgressStateSpec {
+  state: string;
+  label: string;
+  /** Meter fill. */
+  fillClass: string;
+  /** Count card surface. */
+  cardClass: string;
+  labelClass: string;
+  valueClass: string;
+  count: (p: ProgressCounts) => number;
+}
+
+// One description per execution state, consumed by both the meter and the
+// count grid. Deriving both from a single list is what keeps them honest: the
+// meter previously omitted `queued`, so a launch with nothing started yet
+// rendered an empty bar beside a grid reading "queued: 6".
+const PROGRESS_STATES: ProgressStateSpec[] = [
+  {
+    state: "queued",
+    label: "排队中",
+    fillClass: "bg-queued-solid",
+    cardClass: "bg-queued-subtle border-queued-border",
+    labelClass: "text-queued",
+    valueClass: "text-queued-strong",
+    count: (p) => p.queued + p.pending,
+  },
+  {
+    state: "running",
+    label: "运行中",
+    fillClass: "bg-running-solid animate-pulse",
+    cardClass: "bg-running-subtle border-running-border",
+    labelClass: "text-running",
+    valueClass: "text-running-strong",
+    count: (p) => p.running,
+  },
+  {
+    state: "pass",
+    label: "成功",
+    fillClass: "bg-pass-solid",
+    cardClass: "bg-pass-subtle border-pass-border",
+    labelClass: "text-pass",
+    valueClass: "text-pass-strong",
+    count: (p) => p.succeeded,
+  },
+  {
+    state: "fail",
+    label: "失败",
+    fillClass: "bg-fail-solid",
+    cardClass: "bg-fail-subtle border-fail-border",
+    labelClass: "text-fail",
+    valueClass: "text-fail-strong",
+    count: (p) => p.failed,
+  },
+  {
+    state: "timeout",
+    label: "超时",
+    fillClass: "bg-timeout-solid",
+    cardClass: "bg-timeout-subtle border-timeout-border",
+    labelClass: "text-timeout",
+    valueClass: "text-timeout-strong",
+    count: (p) => p.timed_out,
+  },
+  {
+    state: "retry",
+    label: "等待重试",
+    fillClass: "bg-retry-solid",
+    cardClass: "bg-retry-subtle border-retry-border",
+    labelClass: "text-retry",
+    valueClass: "text-retry-strong",
+    count: (p) => p.retry_wait,
+  },
+  {
+    state: "cancelled",
+    label: "已取消",
+    fillClass: "bg-cancelled-solid",
+    cardClass: "bg-cancelled-subtle border-cancelled-border",
+    labelClass: "text-cancelled",
+    valueClass: "text-cancelled-strong",
+    count: (p) => p.cancelled,
+  },
+];
 
 export const LaunchDetail: React.FC = () => {
   const { launchId } = useParams<{ launchId: string }>();
@@ -287,6 +383,11 @@ export const LaunchDetail: React.FC = () => {
 
   const allowedActions = launch.allowed_actions || (launch.status === "PENDING" ? ["run"] : []);
   const progress = launch.progress;
+  // Derived inline: seven entries, and this sits below the component's early
+  // returns where a hook would violate the rules of hooks.
+  const progressSegments = progress
+    ? PROGRESS_STATES.map((spec) => ({ ...spec, count: spec.count(progress) }))
+    : [];
 
   const manifest = (launch.manifest || {}) as ManifestData;
   const manifestAgent = manifest.agent || {};
@@ -392,21 +493,21 @@ export const LaunchDetail: React.FC = () => {
       </div>
 
       {actionError && (
-        <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+        <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
           {actionError}
         </div>
       )}
 
       {/* Cancellation Banner */}
       {launch.cancel_requested_at && launch.status !== "CANCELLED" && (
-        <div className="p-3.5 text-xs bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-center justify-between shadow-xs">
+        <div className="p-3.5 text-xs bg-timeout-subtle border border-timeout-border rounded-xl text-timeout-strong flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+            <Clock className="w-4 h-4 text-timeout animate-spin" />
             <span>
               已收到协作取消请求，系统正在等待处于执行态的任务安全终止（状态过渡中：CANCELLING）。
             </span>
           </div>
-          <span className="font-mono text-[11px] text-amber-700">
+          <span className="font-mono text-micro text-timeout">
             申请时间: {new Date(launch.cancel_requested_at).toLocaleTimeString("zh-CN")}
           </span>
         </div>
@@ -448,7 +549,7 @@ export const LaunchDetail: React.FC = () => {
             />
           </div>
           {launch.langfuse_sync_error && (
-            <p className="text-[11px] text-rose-600 mt-1 truncate" title={launch.langfuse_sync_error}>
+            <p className="text-micro text-fail mt-1 truncate" title={launch.langfuse_sync_error}>
               {launch.langfuse_sync_error}
             </p>
           )}
@@ -460,10 +561,10 @@ export const LaunchDetail: React.FC = () => {
           </span>
           <span className="text-base font-bold font-mono text-foreground">
             {itemsError ? (
-              <span className="text-xs text-rose-600">暂不可用</span>
+              <span className="text-xs text-fail">暂不可用</span>
             ) : totalItems !== null && totalItems > 0 ? (
               <>
-                <span className="text-emerald-600">{passedItems}</span>
+                <span className="text-pass">{passedItems}</span>
                 <span className="text-muted-foreground font-normal"> / </span>
                 <span>{totalItems}</span>
                 <span className="text-xs text-muted-foreground font-normal ml-2">
@@ -492,80 +593,51 @@ export const LaunchDetail: React.FC = () => {
               <span>实时执行进度看板</span>
               <span className="font-mono text-primary">({progress.percentage}%)</span>
             </div>
-            <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px]">
+            <div className="flex items-center gap-3 text-muted-foreground font-mono text-micro">
               <span>总调用: {progress.attempts} 次</span>
               <span>重试: {progress.retries} 次</span>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-surface-muted rounded-full h-2.5 overflow-hidden flex">
-            <div
-              className="bg-emerald-500 h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.succeeded / progress.total) * 100 : 0}%` }}
-              title={`成功: ${progress.succeeded}`}
-            />
-            <div
-              className="bg-rose-500 h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.failed / progress.total) * 100 : 0}%` }}
-              title={`失败: ${progress.failed}`}
-            />
-            <div
-              className="bg-amber-400 h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.timed_out / progress.total) * 100 : 0}%` }}
-              title={`超时: ${progress.timed_out}`}
-            />
-            <div
-              className="bg-sky-400 h-full transition-all duration-300 animate-pulse"
-              style={{ width: `${progress.total > 0 ? (progress.running / progress.total) * 100 : 0}%` }}
-              title={`运行中: ${progress.running}`}
-            />
-            <div
-              className="bg-yellow-400 h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.retry_wait / progress.total) * 100 : 0}%` }}
-              title={`等待重试: ${progress.retry_wait}`}
-            />
-            <div
-              className="bg-border-strong h-full transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.cancelled / progress.total) * 100 : 0}%` }}
-              title={`已取消: ${progress.cancelled}`}
-            />
+          {/* Progress Bar — derived from the state list so that no state can be
+              silently dropped. Queued items are included; a launch whose work
+              has not started yet must not render an empty meter. */}
+          <div
+            data-testid="progress-meter"
+            className="w-full bg-surface-muted rounded-full h-2.5 overflow-hidden flex"
+          >
+            {progressSegments.map((segment) => (
+              <div
+                key={segment.state}
+                data-segment={segment.state}
+                data-share={segment.count}
+                className={clsx("h-full transition-all duration-300", segment.fillClass)}
+                style={{ width: `${progress.total > 0 ? (segment.count / progress.total) * 100 : 0}%` }}
+                title={`${segment.label}: ${segment.count}`}
+              />
+            ))}
           </div>
 
           {/* Grid Counts */}
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-1">
-            <div className="text-center p-2 rounded-lg bg-canvas border border-border">
-              <span className="text-[11px] text-muted-foreground block">总用例</span>
-              <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.total}</span>
+            {/* The denominator, not a state: flat and untinted so it cannot be
+                mistaken for one of the seven status buckets. */}
+            <div className="text-center p-2 rounded-lg border border-border-strong border-dashed">
+              <span className="text-micro text-muted-foreground block">总用例</span>
+              <span className="text-sm font-bold font-mono text-foreground">{progress.total}</span>
             </div>
-            <div className="text-center p-2 rounded-lg bg-primary-subtle/60 border border-primary-border">
-              <span className="text-[11px] text-primary block">排队中</span>
-              <span className="text-sm font-bold font-mono text-primary-strong">{progress.queued + progress.pending}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-sky-50/60 border border-sky-100">
-              <span className="text-[11px] text-sky-600 block">运行中</span>
-              <span className="text-sm font-bold font-mono text-sky-700">{progress.running}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-emerald-50/60 border border-emerald-100">
-              <span className="text-[11px] text-emerald-600 block">成功</span>
-              <span className="text-sm font-bold font-mono text-emerald-700">{progress.succeeded}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-rose-50/60 border border-rose-100">
-              <span className="text-[11px] text-rose-600 block">失败</span>
-              <span className="text-sm font-bold font-mono text-rose-700">{progress.failed}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-amber-50/60 border border-amber-100">
-              <span className="text-[11px] text-amber-600 block">超时</span>
-              <span className="text-sm font-bold font-mono text-amber-700">{progress.timed_out}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-yellow-50/60 border border-yellow-100">
-              <span className="text-[11px] text-yellow-600 block">等待重试</span>
-              <span className="text-sm font-bold font-mono text-yellow-700">{progress.retry_wait}</span>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-surface-muted border border-border">
-              <span className="text-[11px] text-muted-foreground block">已取消</span>
-              <span className="text-sm font-bold font-mono text-foreground-secondary">{progress.cancelled}</span>
-            </div>
+            {progressSegments.map((segment) => (
+              <div
+                key={segment.state}
+                data-card={segment.state}
+                className={clsx("text-center p-2 rounded-lg border", segment.cardClass)}
+              >
+                <span className={clsx("text-micro block", segment.labelClass)}>{segment.label}</span>
+                <span className={clsx("text-sm font-bold font-mono", segment.valueClass)}>
+                  {segment.count}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -580,14 +652,14 @@ export const LaunchDetail: React.FC = () => {
             </h3>
             <span
               data-testid="manifest-schema-version"
-              className="px-2 py-0.5 rounded text-[11px] font-mono bg-primary-subtle text-primary-strong border border-primary-border font-semibold"
+              className="px-2 py-0.5 rounded text-micro font-mono bg-primary-subtle text-primary-strong border border-primary-border font-semibold"
             >
               Schema v{manifest.schema_version || manifest.manifest_version || "1.0"}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-muted-foreground hidden sm:inline">
+            <span className="text-micro text-muted-foreground hidden sm:inline">
               严格固定执行时规格，不随 Registry 后续变更漂移
             </span>
             <button
@@ -619,11 +691,11 @@ export const LaunchDetail: React.FC = () => {
               </div>
               <div className="truncate" title={manifestAgent.endpoint || ""}>
                 <span className="text-muted-foreground">Endpoint:</span>{" "}
-                <span className="font-mono text-[11px]">{manifestAgent.endpoint || "-"}</span>
+                <span className="font-mono text-micro">{manifestAgent.endpoint || "-"}</span>
               </div>
               <div className="truncate" title={manifestAgent.spec_digest || ""}>
                 <span className="text-muted-foreground">Digest:</span>{" "}
-                <span className="font-mono text-[11px]">{manifestAgent.spec_digest?.slice(0, 12)}...</span>
+                <span className="font-mono text-micro">{manifestAgent.spec_digest?.slice(0, 12)}...</span>
               </div>
             </div>
           </div>
@@ -641,13 +713,13 @@ export const LaunchDetail: React.FC = () => {
               </div>
               <div>
                 <span className="text-muted-foreground">Version:</span>{" "}
-                <span className="font-mono text-[11px] block truncate" title={manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || ""}>
+                <span className="font-mono text-micro block truncate" title={manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || ""}>
                   {manifest.dataset?.dataset_version || manifest.dataset?.version || launch.dataset_version || "-"}
                 </span>
               </div>
               <div className="truncate" title={manifest.dataset?.snapshot_digest || ""}>
                 <span className="text-muted-foreground">Digest:</span>{" "}
-                <span data-testid="dataset-snapshot-digest" className="font-mono text-[11px]">
+                <span data-testid="dataset-snapshot-digest" className="font-mono text-micro">
                   {manifest.dataset?.snapshot_digest ? `${manifest.dataset.snapshot_digest.slice(0, 12)}...` : "-"}
                 </span>
               </div>
@@ -663,7 +735,7 @@ export const LaunchDetail: React.FC = () => {
           {/* Dimension 3: Evaluators */}
           <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
             <div className="flex items-center gap-1.5 font-semibold text-foreground">
-              <Zap className="w-4 h-4 text-amber-500" />
+              <Zap className="w-4 h-4 text-timeout" />
               <span>3. 评测门禁指标 ({manifestEvaluators.length})</span>
             </div>
             <div className="flex flex-wrap gap-1">
@@ -672,7 +744,7 @@ export const LaunchDetail: React.FC = () => {
                 return (
                   <span
                     key={evalId}
-                    className="px-2 py-0.5 rounded text-[11px] font-mono bg-surface border border-border text-foreground-secondary"
+                    className="px-2 py-0.5 rounded text-micro font-mono bg-surface border border-border text-foreground-secondary"
                   >
                     {evalId}
                   </span>
@@ -684,19 +756,19 @@ export const LaunchDetail: React.FC = () => {
           {/* Dimension 4: Execution Policy & Runner */}
           <div className="p-3.5 bg-canvas/80 rounded-lg border border-border space-y-2">
             <div className="flex items-center gap-1.5 font-semibold text-foreground">
-              <Sliders className="w-4 h-4 text-emerald-600" />
+              <Sliders className="w-4 h-4 text-pass" />
               <span>4. Runner 与调度策略</span>
             </div>
             <div className="space-y-1 text-foreground-secondary">
               <div>
                 <span className="text-muted-foreground">Runner Ver:</span>{" "}
-                <span data-testid="runner-version" className="font-mono text-[11px]">
+                <span data-testid="runner-version" className="font-mono text-micro">
                   {manifestRunner.runner_version || "1.0.0"}
                 </span>
               </div>
               <div className="truncate" title={manifestRunner.mapping_engine_version || ""}>
                 <span className="text-muted-foreground">Engine:</span>{" "}
-                <span className="font-mono text-[11px]">{manifestRunner.mapping_engine_version || "-"}</span>
+                <span className="font-mono text-micro">{manifestRunner.mapping_engine_version || "-"}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Concurrency:</span>{" "}
@@ -739,49 +811,56 @@ export const LaunchDetail: React.FC = () => {
       )}
 
       {/* Retry Failed Confirmation Modal */}
-      {showRetryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-surface rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-border">
-            <h3 className="text-base font-bold text-foreground">重试失败用例 (Retry Failed Items)</h3>
-            <p className="text-xs text-foreground-secondary leading-relaxed">
-              系统将仅针对执行失败 (<code className="text-rose-600 font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-amber-600 font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
-            </p>
+      <Modal
+        open={showRetryModal}
+        onClose={() => setShowRetryModal(false)}
+        title="重试失败用例 (Retry Failed Items)"
+        tone="danger"
+        // A retry already submitted must not be abandoned by a stray click.
+        dismissable={!retryFailedMutation.isPending}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              onClick={() => setShowRetryModal(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="warning-solid"
+              className="text-xs"
+              disabled={retryFailedMutation.isPending}
+              onClick={() => retryFailedMutation.mutate(forceRetry)}
+            >
+              {retryFailedMutation.isPending ? "正在提交重试..." : "确认重新调度"}
+            </Button>
+          </>
+        }
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-xs text-foreground-secondary leading-relaxed">
+            系统将仅针对执行失败 (<code className="text-fail font-mono font-semibold">FAILED</code>) 或超时 (<code className="text-timeout font-mono font-semibold">TIMED_OUT</code>) 的用例发起全新调度代次 (generation + 1)，已成功的用例将被严格保护并跳过。
+          </p>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={forceRetry}
-                  onChange={(e) => setForceRetry(e.target.checked)}
-                  className="mt-0.5 rounded text-primary focus:ring-focus"
-                />
-                <span className="text-xs text-amber-900">
-                  <strong className="block font-semibold">强制重试非幂等可能已发送用例 (Force Replay)</strong>
-                  若用例在 Worker 崩溃前可能已将请求发出且接口非幂等，勾选此项以确认允许二次执行。
-                </span>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowRetryModal(false)}
-                className="px-3 py-1.5 text-xs font-semibold text-foreground-secondary hover:text-foreground cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                disabled={retryFailedMutation.isPending}
-                onClick={() => retryFailedMutation.mutate(forceRetry)}
-                className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                {retryFailedMutation.isPending ? "正在提交重试..." : "确认重新调度"}
-              </button>
-            </div>
+          <div className="p-3 bg-timeout-subtle border border-timeout-border rounded-xl">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={forceRetry}
+                onChange={(e) => setForceRetry(e.target.checked)}
+                className="mt-0.5 rounded text-primary focus:ring-focus"
+              />
+              <span className="text-xs text-timeout-strong">
+                <strong className="block font-semibold">强制重试非幂等可能已发送用例 (Force Replay)</strong>
+                若用例在 Worker 崩溃前可能已将请求发出且接口非幂等，勾选此项以确认允许二次执行。
+              </span>
+            </label>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

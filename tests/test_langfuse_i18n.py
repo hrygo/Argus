@@ -184,11 +184,38 @@ def test_i18n_workflow_filters_changes_and_publishes_ghcr_image() -> None:
     assert "workflow_dispatch" in triggers
 
     image_job = workflow["jobs"]["image"]
-    assert image_job["permissions"] == {"contents": "read", "packages": "write"}
+    # Allowlist rather than exact equality: provenance attestation needs
+    # `attestations` and `id-token`, and an exact-equality pin turns every
+    # deliberate hardening into a red test, which is how a security assertion
+    # quietly gets deleted. The set is still closed, so an accidental grant
+    # (e.g. `actions: write`) still fails here.
+    allowed_permissions = {
+        "contents": "read",
+        "packages": "write",
+        "attestations": "write",
+        "id-token": "write",
+    }
+    assert image_job["permissions"] == allowed_permissions
     steps = image_job["steps"]
 
+    # Actions are pinned to commit SHAs (see #51). Assert the *name* and the
+    # shape of the ref rather than a mutable tag: pinning a tag here would
+    # silently un-pin the workflow the moment someone bumps a version.
+    def action(step: dict) -> tuple[str, str]:
+        owner_repo, _, ref = step["uses"].partition("@")
+        return owner_repo, ref
+
+    def is_sha(ref: str) -> bool:
+        return len(ref) == 40 and all(c in "0123456789abcdef" for c in ref)
+
+    for step in steps:
+        if "uses" not in step:
+            continue
+        owner_repo, ref = action(step)
+        assert is_sha(ref), f"{owner_repo} is not pinned to a commit SHA: {ref}"
+
     metadata = next(step for step in steps if step.get("id") == "meta")
-    assert metadata["uses"] == "docker/metadata-action@v5"
+    assert action(metadata)[0] == "docker/metadata-action"
     assert metadata["with"]["images"] == "ghcr.io/minicem/argus-langfuse-i18n"
 
     login = next(step for step in steps if step.get("name") == "Log in to GHCR")
@@ -196,19 +223,35 @@ def test_i18n_workflow_filters_changes_and_publishes_ghcr_image() -> None:
     assert login["with"]["password"] == "${{ secrets.GITHUB_TOKEN }}"
 
     build = next(step for step in steps if step.get("id") == "build")
+    # The two attestation permissions exist to sign the published image; if the
+    # provenance step is ever dropped they become an unjustified grant. Signing
+    # is asserted per event rather than by scanning for a literal, because the
+    # two paths use different exporters: push publishes via the OCI exporter
+    # (attestation -> manifest list, supported), while pull_request builds with
+    # load:true (docker exporter, which cannot export a manifest list and would
+    # fail the whole job). Asserting only "some step mentions mode=max" would
+    # have let the PR-breaking combination through.
+    assert build["with"]["provenance"] == (
+        "${{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}"
+    )
+    assert build["with"]["sbom"] == (
+        "${{ github.event_name != 'pull_request' && 'true' || 'false' }}"
+    )
     qemu = next(
-        step for step in steps if step.get("uses") == "docker/setup-qemu-action@v3"
+        step
+        for step in steps
+        if action(step)[0] == "docker/setup-qemu-action"
     )
     assert qemu["with"] == {"platforms": "arm64"}
     buildx_index = next(
         i
         for i, step in enumerate(steps)
-        if step.get("uses") == "docker/setup-buildx-action@v3"
+        if "uses" in step and action(step)[0] == "docker/setup-buildx-action"
     )
     qemu_index = next(
         i
         for i, step in enumerate(steps)
-        if step.get("uses") == "docker/setup-qemu-action@v3"
+        if "uses" in step and action(step)[0] == "docker/setup-qemu-action"
     )
     assert qemu_index < buildx_index
     assert build["with"]["platforms"] == (

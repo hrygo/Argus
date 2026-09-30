@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, AlertTriangle, Trash2, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Trash2 } from "lucide-react";
 import { api } from "../../api/client";
 import { queryKeys } from "../../api/query-keys";
 import { formatApiError, getApiErrorCode } from "../../api/errors";
+import { Button, Field, TextInput } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
+
+const FORM_ID = "delete-agent-form";
 
 export interface DeleteAgentModalProps {
   isOpen: boolean;
@@ -240,18 +244,6 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
     },
   });
 
-  // Handle ESC key to close modal (disabled while mutation is pending)
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !mutation.isPending) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, mutation.isPending]);
-
   if (!isOpen || !agent) return null;
 
   // Strict exact match without trimming
@@ -286,53 +278,53 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
     mutation.mutate();
   };
 
-  const handleBackdropClick = () => {
-    if (!mutation.isPending) {
-      onClose();
-    }
-  };
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-agent-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="relative w-full max-w-lg bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-rose-50/40">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 id="delete-agent-title" className="text-base font-bold text-foreground">
-                {forceRequired ? "高危：强制清理 Agent 及评测记录" : "删除 Agent"}
-              </h3>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {agent.id}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={mutation.isPending}
-            className="p-1.5 text-muted-foreground hover:text-foreground-secondary hover:bg-surface-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={forceRequired ? "高危：强制清理 Agent 及评测记录" : "删除 Agent"}
+      subtitle={`ID: ${agent.id}`}
+      tone="danger"
+      icon={
+        <span
+          aria-hidden="true"
+          className="flex size-10 items-center justify-center rounded-xl border border-fail-border bg-fail-subtle text-fail"
+        >
+          <AlertTriangle className="w-5 h-5" />
+        </span>
+      }
+      // A deletion already in flight must not be abandoned by a stray click.
+      dismissable={!mutation.isPending}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} className="text-xs">
+            取消
+          </Button>
+          <Button
+            type="submit"
+            form={FORM_ID}
+            variant="danger"
+            className="text-xs"
+            disabled={!canSubmit || mutation.isPending}
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
+            <span>
+              {mutation.isPending
+                ? "正在删除..."
+                : forceRequired
+                  ? "确认强制清理"
+                  : "确认删除"}
+            </span>
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit} className="p-6 space-y-4">
           {!summaryReady && !summaryQuery.isError && (
             <p role="status" className="text-xs text-muted-foreground">正在核对最新评测状态...</p>
           )}
           {summaryQuery.isError && (
-            <div role="alert" className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700">
+            <div role="alert" className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail">
               <p>无法加载最新评测状态：{formatApiError(summaryQuery.error)}</p>
               <button
                 type="button"
@@ -344,16 +336,16 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
             </div>
           )}
           {errorMsg && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium leading-relaxed">
+            <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium leading-relaxed">
               {errorMsg}
             </div>
           )}
 
           {/* Active Launches Blocking Notice */}
           {hasActiveLaunches && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-2 leading-relaxed">
-              <p className="font-semibold text-rose-900 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <div className="p-3.5 bg-fail-subtle border border-fail-border rounded-xl text-xs text-fail-strong space-y-2 leading-relaxed">
+              <p className="font-semibold text-fail-strong flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-fail flex-shrink-0" />
                 <span>禁止删除：存在活跃评测任务</span>
               </p>
               <p>
@@ -364,32 +356,41 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
 
           {forceRequired ? (
             <div className="space-y-4">
-              <div className="p-3.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-xs text-amber-800 space-y-2 leading-relaxed">
-                <p className="font-semibold text-amber-900 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="p-3.5 bg-timeout-subtle/90 border border-timeout-border/80 rounded-xl text-xs text-timeout-strong space-y-2 leading-relaxed">
+                <p className="font-semibold text-timeout-strong flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-timeout flex-shrink-0" />
                   <span>注意：该 Agent 包含关联评测记录</span>
                 </p>
                 <p>
                   该 Agent 存在 <strong>{effectiveLaunchCount}</strong> 条历史评测记录。强制清理将连同本地所有执行历史一并清除，此操作不可撤销。
                 </p>
-                <div className="pt-1 text-[11px] text-amber-700 border-t border-amber-200/60">
+                <div className="pt-1 text-micro text-timeout border-t border-timeout-border/60">
                   🛡️ <strong>安全保障</strong>：仅清除当前 Argus 本地记录，<strong>Langfuse 中的 Dataset / Trace 记录不会被删除</strong>。
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-                  请输入 Agent 全称 <span className="text-rose-600 font-bold select-all">"{agent.name}"</span> 以确认：
-                </label>
-                <input
-                  type="text"
-                  autoFocus
-                  disabled={hasActiveLaunches || mutation.isPending}
-                  value={confirmName}
-                  onChange={(e) => setConfirmName(e.target.value)}
-                  placeholder={`请输入 ${agent.name}`}
-                  className="ui-control w-full text-sm font-medium disabled:opacity-50"
-                />
+                <Field
+                  label={
+                    <>
+                      请输入 Agent 全称{" "}
+                      <span className="text-fail font-bold select-all">"{agent.name}"</span> 以确认：
+                    </>
+                  }
+                >
+                  {({ id }) => (
+                    <TextInput
+                      id={id}
+                      type="text"
+                      autoFocus
+                      disabled={hasActiveLaunches || mutation.isPending}
+                      value={confirmName}
+                      onChange={(e) => setConfirmName(e.target.value)}
+                      placeholder={`请输入 ${agent.name}`}
+                      className="w-full text-sm font-medium disabled:opacity-50"
+                    />
+                  )}
+                </Field>
               </div>
             </div>
           ) : (
@@ -398,29 +399,7 @@ export const DeleteAgentModal: React.FC<DeleteAgentModalProps> = ({
             </p>
           )}
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={mutation.isPending}
-              className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:text-foreground hover:bg-surface-muted rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={!canSubmit || mutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>
-                {mutation.isPending ? "正在删除..." : forceRequired ? "确认强制清理" : "确认删除"}
-              </span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };

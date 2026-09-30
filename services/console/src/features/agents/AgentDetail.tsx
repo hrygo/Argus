@@ -10,6 +10,7 @@ import { DeleteAgentModal } from "./DeleteAgentModal";
 import { EmptyState, ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
 import { Button, PageHeader, Panel } from "../../components/ui/Primitives";
+import { Modal } from "../../components/ui/Overlay";
 
 export const AgentDetail: React.FC = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -17,6 +18,7 @@ export const AgentDetail: React.FC = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [versionToArchive, setVersionToArchive] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: agent, isLoading: isAgentLoading, error: agentError, refetch: refetchAgent } = useQuery({
@@ -89,7 +91,7 @@ export const AgentDetail: React.FC = () => {
                 <Bot className="h-4 w-4" />
               </span>
               <span className="truncate">{agent.name}</span>
-              <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "success" : "neutral"}>
+              <Badge tone={agent.status.toUpperCase() === "ACTIVE" ? "pass" : "neutral"}>
                 {agent.status.toUpperCase()}
               </Badge>
             </span>
@@ -111,7 +113,7 @@ export const AgentDetail: React.FC = () => {
       </div>
 
       {actionError && (
-        <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+        <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
           {actionError}
         </div>
       )}
@@ -138,9 +140,9 @@ export const AgentDetail: React.FC = () => {
             <span>{agent.launch_count ?? 0} 次</span>
             {(agent.active_launch_count ?? 0) > 0 && (
               <Badge
-                tone="info"
+                tone="running"
                 title="活跃评测包含待执行、排队中、运行中、取消中等尚未结束状态的 Launch。"
-                className="px-1.5 text-[10px]"
+                className="px-1.5 text-2xs"
               >
                 {agent.active_launch_count} 条活跃评测
               </Badge>
@@ -173,13 +175,10 @@ export const AgentDetail: React.FC = () => {
             title="暂无任何版本"
             description="该 Agent 尚未创建任何版本规格。请点击上方按钮创建 1.0.0 版本。"
             action={
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg"
-              >
-                <Plus className="w-3.5 h-3.5" />
+              <Button variant="primary" onClick={() => setIsCreateOpen(true)} className="text-xs">
+                <Plus aria-hidden="true" className="w-3.5 h-3.5" />
                 <span>立即创建版本</span>
-              </button>
+              </Button>
             }
           />
         )}
@@ -207,7 +206,7 @@ export const AgentDetail: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-4">
-                        <Badge tone={ver.is_active ? "success" : "neutral"}>
+                        <Badge tone={ver.is_active ? "pass" : "neutral"}>
                           {ver.is_active ? "ACTIVE" : "ARCHIVED"}
                         </Badge>
                       </td>
@@ -239,7 +238,9 @@ export const AgentDetail: React.FC = () => {
                       <td className="px-6 py-4 text-right space-x-2">
                         <Link
                           to={`/agents/${agent.id}/versions/${ver.version}`}
-                          className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary-strong"
+                          // SC 2.5.8 Target Size (Minimum): the bare text link
+                          // was 18px tall, below the 24px floor.
+                          className="inline-flex min-h-7 items-center gap-0.5 px-1.5 text-xs font-semibold text-primary hover:text-primary-strong"
                         >
                           <span>查看配置</span>
                           <ChevronRight className="w-3 h-3" />
@@ -248,13 +249,11 @@ export const AgentDetail: React.FC = () => {
                         {ver.is_active && (
                           <button
                             type="button"
-                            onClick={() => {
-                              if (confirm(`确认归档版本 ${ver.version} 吗？归档后将不能用于新评测。`)) {
-                                archiveMutation.mutate(ver.version);
-                              }
-                            }}
+                            onClick={() => setVersionToArchive(ver.version)}
                             disabled={archiveMutation.isPending}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-rose-600 transition-colors ml-2 cursor-pointer disabled:opacity-50"
+                            // SC 2.5.8 Target Size (Minimum): the bare text link
+                            // was 18px tall, below the 24px floor.
+                            className="inline-flex min-h-7 items-center gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-fail transition-colors ml-2 cursor-pointer disabled:opacity-50"
                           >
                             <Archive className="w-3 h-3" />
                             <span>归档</span>
@@ -290,6 +289,46 @@ export const AgentDetail: React.FC = () => {
         onClose={() => setIsDeleteOpen(false)}
         onSuccess={() => navigate("/agents")}
       />
+
+      <Modal
+        open={versionToArchive !== null}
+        onClose={() => setVersionToArchive(null)}
+        title="归档版本"
+        tone="danger"
+        // A submitted archive must not be abandoned by a stray click.
+        dismissable={!archiveMutation.isPending}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              onClick={() => setVersionToArchive(null)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              className="text-xs"
+              disabled={archiveMutation.isPending}
+              onClick={() => {
+                if (versionToArchive === null) return;
+                archiveMutation.mutate(versionToArchive, {
+                  onSuccess: () => setVersionToArchive(null),
+                });
+              }}
+            >
+              {archiveMutation.isPending ? "正在归档..." : "确认归档"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-foreground">
+          确认归档版本{" "}
+          <span className="font-semibold">{versionToArchive}</span> 吗？归档后该版本将不能用于新评测。
+        </p>
+      </Modal>
     </div>
   );
 };

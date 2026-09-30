@@ -10,12 +10,21 @@ interface StatusBadgeProps {
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = "" }) => {
   const normalized = status.toUpperCase();
-  let tone: BadgeTone = "neutral";
-
-  if (normalized === "SUCCEEDED" || normalized === "COMPLETED") tone = "success";
-  else if (normalized === "FAILED") tone = "danger";
-  else if (normalized === "PARTIAL_FAILED" || normalized === "PARTIAL" || normalized === "PENDING" || normalized === "RETRY_WAIT" || normalized === "TIMED_OUT") tone = "warning";
-  else if (normalized === "RUNNING" || normalized === "QUEUED" || normalized === "CANCELLING") tone = "info";
+  const tones: Record<string, BadgeTone> = {
+    SUCCEEDED: "pass",
+    COMPLETED: "pass",
+    FAILED: "fail",
+    PARTIAL_FAILED: "fail",
+    PARTIAL: "timeout",
+    TIMED_OUT: "timeout",
+    RETRY_WAIT: "retry",
+    RUNNING: "running",
+    PENDING: "queued",
+    QUEUED: "queued",
+    CANCELLING: "cancelled",
+    CANCELLED: "cancelled",
+  };
+  const tone: BadgeTone = tones[normalized] ?? "neutral";
 
   return <Badge tone={tone} data-testid="status-badge" data-tone={tone} className={className}>{normalized}</Badge>;
 };

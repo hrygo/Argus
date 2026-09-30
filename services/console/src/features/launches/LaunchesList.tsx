@@ -154,16 +154,21 @@ export const LaunchesList: React.FC = () => {
       />
 
       {/* Filter Bar */}
-      <div className="ui-panel flex flex-wrap items-center gap-2.5 p-3 text-xs">
-        <div className="flex items-center gap-1.5 text-muted-foreground font-semibold uppercase tracking-wider text-[11px] mr-1">
+      <div
+        role="group"
+        aria-label="评测筛选"
+        className="ui-panel flex flex-wrap items-center gap-2.5 p-3 text-xs"
+      >
+        <div className="flex items-center gap-1.5 text-muted-foreground font-semibold uppercase tracking-wider text-micro mr-1">
           <Filter className="w-3.5 h-3.5" />
           <span>过滤筛选:</span>
         </div>
 
         {/* Agent Filter */}
-        <div className="relative min-w-[180px]">
+        <div className="relative min-w-col-xl">
           <TextInput
             type="text"
+            aria-label="按 Agent ID 过滤"
             placeholder="按 Agent ID 过滤..."
             value={filterAgent}
             onChange={(e) => setFilterAgent(e.target.value)}
@@ -173,9 +178,10 @@ export const LaunchesList: React.FC = () => {
 
         {/* Status Filter */}
         <SelectInput
+          aria-label="按执行状态过滤"
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="w-auto min-w-[170px] text-xs"
+          className="w-auto min-w-col-lg text-xs"
         >
           <option value="">全部执行状态 (Status)</option>
           {LAUNCH_STATUSES.map((status) => (
@@ -187,9 +193,10 @@ export const LaunchesList: React.FC = () => {
 
         {/* Quality Filter */}
         <SelectInput
+          aria-label="按质量结论过滤"
           value={filterQuality}
           onChange={(e) => setFilterQuality(e.target.value)}
-          className="w-auto min-w-[170px] text-xs"
+          className="w-auto min-w-col-lg text-xs"
         >
           <option value="">全部质量结论 (Quality)</option>
           <option value="pass">PASS (通过)</option>
@@ -240,18 +247,18 @@ export const LaunchesList: React.FC = () => {
       {!isLoading && !error && launches && launches.length > 0 && (
         <Panel className="ui-table-shell">
           <div className="overflow-x-auto">
-            <table className="ui-table min-w-[1132px] table-fixed text-sm text-foreground-secondary">
+            <table className="ui-table min-w-table-lg table-fixed text-sm text-foreground-secondary">
               <colgroup>
-                <col className="w-[136px]" />
-                <col className="w-[170px]" />
-                <col className="w-[145px]" />
-                <col className="w-[155px]" />
-                <col className="w-[84px]" />
-                <col className="w-[118px]" />
-                <col className="w-[144px]" />
-                <col className="w-[180px]" />
+                <col className="w-col-xs" />
+                <col className="w-col-lg" />
+                <col className="w-col-sm" />
+                <col className="w-col-md" />
+                <col className="w-col-3xs" />
+                <col className="w-col-2xs" />
+                <col className="w-col-sm" />
+                <col className="w-col-xl" />
               </colgroup>
-              <thead className="bg-surface-muted border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <thead className="bg-surface-muted border-b border-border text-micro font-semibold text-muted-foreground uppercase tracking-wider">
                 <tr>
                   <th className="px-3 py-2.5">Launch</th>
                   <th className="px-3 py-2.5">Agent</th>
@@ -288,7 +295,7 @@ export const LaunchesList: React.FC = () => {
                             aria-label={`复制 Launch ID ${launch.id}`}
                           >
                             {isCopied ? (
-                              <Check className="size-3.5 text-emerald-600" />
+                              <Check className="size-3.5 text-pass" />
                             ) : (
                               <Copy className="size-3.5" />
                             )}
@@ -306,13 +313,13 @@ export const LaunchesList: React.FC = () => {
                             >
                               {agentName || launch.agent_id}
                             </span>
-                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-muted text-foreground-secondary font-mono text-[10px] whitespace-nowrap">
+                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-muted text-foreground-secondary font-mono text-2xs whitespace-nowrap">
                               {launch.agent_version}
                             </span>
                           </div>
                           {agentName && agentName !== launch.agent_id && (
                             <div
-                              className="truncate font-mono text-[11px] text-muted-foreground mt-0.5"
+                              className="truncate font-mono text-micro text-muted-foreground mt-0.5"
                               title={launch.agent_id}
                             >
                               {launch.agent_id}
@@ -331,7 +338,7 @@ export const LaunchesList: React.FC = () => {
                             {launch.dataset_name}
                           </span>
                           <span
-                            className="text-muted-foreground font-mono text-[11px] block truncate mt-0.5"
+                            className="text-muted-foreground font-mono text-micro block truncate mt-0.5"
                             title={launch.dataset_version || ""}
                           >
                             {launch.dataset_version || "-"}
@@ -345,7 +352,7 @@ export const LaunchesList: React.FC = () => {
                           <StatusBadge status={launch.status} />
                           {launch.progress && launch.progress.total > 0 && (
                             <span
-                              className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
+                              className="min-w-0 truncate font-mono text-micro text-muted-foreground"
                               title={`${launch.progress.percentage}% · ${launch.progress.completed}/${launch.progress.total}`}
                             >
                               {launch.progress.percentage}% · {launch.progress.completed}/{launch.progress.total}

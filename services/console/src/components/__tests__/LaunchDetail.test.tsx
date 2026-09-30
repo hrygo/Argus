@@ -326,4 +326,66 @@ describe("LaunchDetail Frozen Manifest Structured Audit View", () => {
     expect(await screen.findByText("用例明细归属的 Launch 与当前页面不一致，请重新加载")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重新加载" })).toBeInTheDocument();
   });
+
+  it("accounts for every item in the progress meter, including queued ones", async () => {
+    // The meter previously drew only pass/fail/timeout/running/retry/cancelled,
+    // so a launch whose items were all queued rendered an empty bar next to a
+    // grid reading "queued: 6". The bar must cover the full item set.
+    const queuedLaunch = {
+      ...mockLaunch,
+      id: "launch-bar-004",
+      status: "PENDING",
+      progress: {
+        total: 6,
+        pending: 6,
+        queued: 0,
+        running: 0,
+        retry_wait: 0,
+        succeeded: 0,
+        failed: 0,
+        timed_out: 0,
+        cancelled: 0,
+        completed: 0,
+        percentage: 0,
+        attempts: 0,
+        retries: 0,
+        allowed_actions: ["run"],
+      },
+    };
+
+    (api.GET as any).mockImplementation((path: string) => {
+      if (path.includes("items")) return Promise.resolve({ data: [] });
+      if (path.includes("/api/v1/experiment-launches")) {
+        return Promise.resolve({ data: queuedLaunch });
+      }
+      return Promise.resolve({ data: null });
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/launches/launch-bar-004"]}>
+          <Routes>
+            <Route path="/launches/:launchId" element={<LaunchDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("实时执行进度看板")).toBeInTheDocument();
+    });
+
+    const meter = document.querySelector('[data-testid="progress-meter"]');
+    expect(meter, "progress meter must be exposed for verification").not.toBeNull();
+
+    const total = queuedLaunch.progress.total;
+    const segments = Array.from(meter!.querySelectorAll("[data-segment]"));
+    const covered = segments.reduce((sum, el) => {
+      const share = Number(el.getAttribute("data-share"));
+      return sum + (Number.isFinite(share) ? share : 0);
+    }, 0);
+
+    expect(covered).toBe(total);
+    expect(segments.some((el) => el.getAttribute("data-segment") === "queued")).toBe(true);
+  });
 });

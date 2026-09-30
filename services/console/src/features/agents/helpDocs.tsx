@@ -26,11 +26,11 @@ export const AGENT_VERSION_FIELD_HELPS: Record<string, Omit<FieldHelpProps, "pla
           <code className="font-mono bg-surface-muted px-1 py-0.5 rounded">https://</code> 协议；
         </li>
         <li>
-          <strong className="text-rose-600">严禁在 URL 中硬编码密码</strong>（如{" "}
+          <strong className="text-fail">严禁在 URL 中硬编码密码</strong>（如{" "}
           <code className="font-mono text-muted-foreground">http://user:pwd@host</code>）；
         </li>
         <li>
-          <strong className="text-rose-600">禁止在 Query 中携带敏感参数</strong>（如{" "}
+          <strong className="text-fail">禁止在 Query 中携带敏感参数</strong>（如{" "}
           <code className="font-mono text-muted-foreground">?token=...</code>），鉴权请使用 SecretRef。
         </li>
       </ul>
@@ -43,7 +43,7 @@ export const AGENT_VERSION_FIELD_HELPS: Record<string, Omit<FieldHelpProps, "pla
       "被测 Agent 接口若需要 Token 鉴权，在此配置密钥的引用标识。Runner 会在运行时动态读取并注入请求头，同时在上报 Langfuse Trace 时自动打码脱敏。",
     rules: (
       <span>
-        <strong className="text-rose-600">严禁直接填入明文 Secret</strong>。当前版本支持{" "}
+        <strong className="text-fail">严禁直接填入明文 Secret</strong>。当前版本支持{" "}
         <code className="font-mono bg-surface-muted px-1 py-0.5 rounded">env://&lt;环境变量名&gt;</code> 格式（读取宿主白名单内的环境变量）。无需鉴权请留空。
       </span>
     ),

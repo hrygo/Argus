@@ -141,7 +141,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
 
         <div>
           <span className="font-semibold text-foreground-secondary">💡 参考示例：</span>
-          <div className="mt-1 bg-canvas p-2 rounded-lg border border-border/80 font-mono text-[11px] text-primary-strong break-all select-all">
+          <div className="mt-1 bg-canvas p-2 rounded-lg border border-border/80 font-mono text-micro text-primary-strong break-all select-all">
             {example}
           </div>
         </div>
@@ -168,7 +168,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
           isMobile ? (
             // 移动端：底部居中模态卡片 + 半透明遮罩，彻底杜绝被 dialog overflow 裁剪
             <div
-              className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 animate-in fade-in duration-150"
+              className="fixed inset-0 z-50 flex items-end justify-center bg-overlay/40 p-4 animate-in fade-in duration-150"
               role="dialog"
               aria-modal="true"
               aria-label={`${title} 帮助说明`}
@@ -178,7 +178,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
             >
               <div
                 ref={cardRef}
-                className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-2xl p-4 text-xs text-left animate-in slide-in-from-bottom-4 duration-200 max-h-[85vh] overflow-y-auto"
+                className="w-full max-w-md bg-surface border border-border rounded-xl shadow-lg p-4 text-xs text-left animate-in slide-in-from-bottom-4 duration-200 max-h-overlay-panel overflow-y-auto"
               >
                 {renderContent()}
               </div>
@@ -188,7 +188,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
             <div
               ref={cardRef}
               style={desktopStyle}
-              className="fixed z-50 w-80 sm:w-88 bg-surface border border-border rounded-xl shadow-xl p-3.5 text-xs text-left animate-in fade-in zoom-in-95 duration-150"
+              className="fixed z-50 w-80 sm:w-88 bg-surface border border-border rounded-xl shadow-lg p-3.5 text-xs text-left animate-in fade-in zoom-in-95 duration-150"
               role="dialog"
               aria-label={`${title} 帮助说明`}
             >

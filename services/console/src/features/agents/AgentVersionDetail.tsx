@@ -92,7 +92,7 @@ export const AgentVersionDetail: React.FC = () => {
               <span className="break-all">{agentId}</span>
               <span className="text-muted-foreground font-normal">@</span>
               <span className="font-mono text-primary">{versionData.version}</span>
-              <Badge tone={versionData.is_active ? "success" : "neutral"}>
+              <Badge tone={versionData.is_active ? "pass" : "neutral"}>
                 {versionData.is_active ? "ACTIVE" : "ARCHIVED"}
               </Badge>
             </span>
@@ -116,17 +116,17 @@ export const AgentVersionDetail: React.FC = () => {
       </div>
 
       {actionError && (
-        <div className="p-3 text-xs bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-medium">
+        <div className="p-3 text-xs bg-fail-subtle border border-fail-border rounded-lg text-fail font-medium">
           {actionError}
         </div>
       )}
 
       {/* Snapshot Alert */}
-      <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl flex items-center gap-3 text-xs text-blue-800">
-        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+      <div className="p-3.5 bg-running-subtle/70 border border-running-border rounded-xl flex items-center gap-3 text-xs text-running-strong">
+        <CheckCircle2 className="w-4 h-4 text-running shrink-0" />
         <div>
           <span className="font-semibold">不可变快照保证 (Immutable Specification Snapshot)：</span>
-          <span className="ml-1 text-blue-700">
+          <span className="ml-1 text-running-strong">
             该版本已固定规格指纹。未来任何配置变更必须注册为新版本号，历史评测将永久锁定此规格。
           </span>
         </div>
@@ -183,7 +183,7 @@ export const AgentVersionDetail: React.FC = () => {
               <div className="h-3 w-px bg-border-strong" />
               <div>
                 <span className="text-muted-foreground mr-1">Trace Context:</span>
-                <span className="font-mono font-semibold text-emerald-700">
+                <span className="font-mono font-semibold text-pass-strong">
                   {versionData.trace_propagation || "w3c"}
                 </span>
               </div>
@@ -197,7 +197,7 @@ export const AgentVersionDetail: React.FC = () => {
         {/* Execution Policy */}
         <div className="ui-panel p-5 shadow-xs space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Zap className="w-4 h-4 text-amber-500" />
+            <Zap className="w-4 h-4 text-timeout" />
             <h3 className="text-sm font-bold text-foreground">执行策略与可靠性保护 (Execution Policy)</h3>
           </div>
 
@@ -234,7 +234,7 @@ export const AgentVersionDetail: React.FC = () => {
 
             <div className="col-span-2 p-3 bg-canvas rounded-lg border border-border flex items-center justify-between">
               <span className="text-muted-foreground">幂等安全 (Is Idempotent):</span>
-              <Badge tone={versionData.is_idempotent ? "success" : "neutral"}>
+              <Badge tone={versionData.is_idempotent ? "pass" : "neutral"}>
                 {versionData.is_idempotent ? "YES (允许安全重试)" : "NO (非幂等)"}
               </Badge>
             </div>
@@ -244,7 +244,7 @@ export const AgentVersionDetail: React.FC = () => {
         {/* Security & Credentials */}
         <div className="ui-panel p-5 shadow-xs space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Shield className="w-4 h-4 text-emerald-600" />
+            <Shield className="w-4 h-4 text-pass" />
             <h3 className="text-sm font-bold text-foreground">安全与凭据引用 (Security & Secrets)</h3>
           </div>
 

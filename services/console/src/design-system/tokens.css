@@ -1,0 +1,130 @@
+/**
+ * Argus Design System - CSS Variables
+ * Generated from Design Tokens SSOT
+ */
+
+:root {
+  /* Canvas & Surfaces */
+  --argus-color-canvas: #f6f7f9;
+  --argus-color-surface: #ffffff;
+  --argus-color-surface-muted: #f3f4f6;
+  --argus-color-surface-raised: #ffffff;
+  --argus-color-surface-overlay: #ffffff;
+
+  /* Foregrounds */
+  --argus-color-foreground: #171923;
+  --argus-color-foreground-secondary: #4b5563;
+  --argus-color-muted-foreground: #686d78;
+  --argus-color-foreground-inverse: #ffffff;
+
+  /* Borders */
+  --argus-color-border: #e5e7eb;
+  --argus-color-border-strong: #868d99;
+  --argus-color-border-subtle: #f3f4f6;
+
+  /* Brand Primary */
+  --argus-color-primary: #5957c8;
+  --argus-color-primary-hover: #4947b7;
+  --argus-color-primary-strong: #403e9f;
+  --argus-color-primary-subtle: #f1f0ff;
+  --argus-color-primary-border: #d9d7ff;
+  --argus-color-focus: #5957c8;
+
+  /* Layout Dimensions */
+  --argus-sidebar-width: 208px;
+  --argus-header-height: 56px;
+  --argus-content-max-width: 1600px;
+
+  /* Focus indication — WCAG 2.2 SC 2.4.11 Focus Appearance */
+  --argus-focus-ring-width: 2px;
+  --argus-focus-ring-offset: 2px;
+
+  /* Elevation — mirrors design-system/tokens/elevation.ts */
+  --argus-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --argus-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --argus-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --argus-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  /* Radii — mirrors design-system/tokens/elevation.ts */
+  --argus-radius-xs: 0.125rem;
+  --argus-radius-sm: 0.25rem;
+  --argus-radius-md: 0.375rem;
+  --argus-radius-lg: 0.5rem;
+  --argus-radius-xl: 0.75rem;
+  --argus-radius-full: 9999px;
+
+  /* Overlays & Scrim */
+  --argus-color-overlay: #0f172a;
+
+  /* Dark Code Surface */
+  --argus-color-code-surface: #0f172a;
+  --argus-color-code-header: #1e293b;
+  --argus-color-code-border: #334155;
+  --argus-color-code-text: #f1f5f9;
+  --argus-color-code-muted: #cbd5e1;
+  --argus-color-code-dim: #94a3b8;
+  --argus-color-code-hover: #e2e8f0;
+
+  /* Status Scale — queued */
+  --argus-color-queued-subtle: #f1f0ff;
+  --argus-color-queued-border: #d9d7ff;
+  --argus-color-queued: #403e9f;
+  --argus-color-queued-strong: #343282;
+  --argus-color-queued-solid: #5957c8;
+  --argus-color-queued-solid-hover: #4947b7;
+  --argus-color-queued-on-solid: #ffffff;
+
+  /* Status Scale — running */
+  --argus-color-running-subtle: #f0f9ff;
+  --argus-color-running-border: #bae6fd;
+  --argus-color-running: #0369a1;
+  --argus-color-running-strong: #075985;
+  --argus-color-running-solid: #0369a1;
+  --argus-color-running-solid-hover: #075985;
+  --argus-color-running-on-solid: #ffffff;
+
+  /* Status Scale — pass */
+  --argus-color-pass-subtle: #ecfdf5;
+  --argus-color-pass-border: #a7f3d0;
+  --argus-color-pass: #047857;
+  --argus-color-pass-strong: #065f46;
+  --argus-color-pass-solid: #047857;
+  --argus-color-pass-solid-hover: #065f46;
+  --argus-color-pass-on-solid: #ffffff;
+
+  /* Status Scale — fail */
+  --argus-color-fail-subtle: #fff1f2;
+  --argus-color-fail-border: #fecdd3;
+  --argus-color-fail: #be123c;
+  --argus-color-fail-strong: #881337;
+  --argus-color-fail-solid: #e11d48;
+  --argus-color-fail-solid-hover: #be123c;
+  --argus-color-fail-on-solid: #ffffff;
+
+  /* Status Scale — timeout */
+  --argus-color-timeout-subtle: #fffbeb;
+  --argus-color-timeout-border: #fde68a;
+  --argus-color-timeout: #b45309;
+  --argus-color-timeout-strong: #92400e;
+  --argus-color-timeout-solid: #b45309;
+  --argus-color-timeout-solid-hover: #92400e;
+  --argus-color-timeout-on-solid: #ffffff;
+
+  /* Status Scale — retry */
+  --argus-color-retry-subtle: #fefce8;
+  --argus-color-retry-border: #fef08a;
+  --argus-color-retry: #a16207;
+  --argus-color-retry-strong: #854d0e;
+  --argus-color-retry-solid: #a16207;
+  --argus-color-retry-solid-hover: #854d0e;
+  --argus-color-retry-on-solid: #ffffff;
+
+  /* Status Scale — cancelled */
+  --argus-color-cancelled-subtle: #f1f5f9;
+  --argus-color-cancelled-border: #e2e8f0;
+  --argus-color-cancelled: #334155;
+  --argus-color-cancelled-strong: #0f172a;
+  --argus-color-cancelled-solid: #64748b;
+  --argus-color-cancelled-solid-hover: #475569;
+  --argus-color-cancelled-on-solid: #ffffff;
+}

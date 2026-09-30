@@ -1,20 +1,143 @@
 @import "tailwindcss";
+@import "./design-system/tokens.css";
+
+/*
+ * Dialog / drawer height constraints. Tailwind has no theme namespace for
+ * viewport-relative heights, so they are declared as named utilities rather
+ * than left as per-call-site arbitrary values.
+ */
+@utility max-h-overlay-panel {
+  max-height: 85vh;
+}
 
 @theme {
-  --color-canvas: #f6f7f9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f3f4f6;
-  --color-foreground: #171923;
-  --color-foreground-secondary: #4b5563;
-  --color-muted-foreground: #686d78;
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
-  --color-primary: #5957c8;
-  --color-primary-hover: #4947b7;
-  --color-primary-strong: #403e9f;
-  --color-primary-subtle: #f1f0ff;
-  --color-primary-border: #d9d7ff;
-  --color-focus: #5a58ce;
+  --color-canvas: var(--argus-color-canvas);
+  --color-surface: var(--argus-color-surface);
+  --color-surface-muted: var(--argus-color-surface-muted);
+  --color-surface-raised: var(--argus-color-surface-raised);
+  --color-surface-overlay: var(--argus-color-surface-overlay);
+  --color-foreground: var(--argus-color-foreground);
+  --color-foreground-secondary: var(--argus-color-foreground-secondary);
+  --color-muted-foreground: var(--argus-color-muted-foreground);
+  --color-foreground-inverse: var(--argus-color-foreground-inverse);
+  --color-border: var(--argus-color-border);
+  --color-border-strong: var(--argus-color-border-strong);
+  --color-border-subtle: var(--argus-color-border-subtle);
+  --color-primary: var(--argus-color-primary);
+  --color-primary-hover: var(--argus-color-primary-hover);
+  --color-primary-strong: var(--argus-color-primary-strong);
+  --color-primary-subtle: var(--argus-color-primary-subtle);
+  --color-primary-border: var(--argus-color-primary-border);
+  --color-focus: var(--argus-color-focus);
+
+  /* Execution Status Scale */
+  --color-queued-subtle: var(--argus-color-queued-subtle);
+  --color-queued-border: var(--argus-color-queued-border);
+  --color-queued: var(--argus-color-queued);
+  --color-queued-strong: var(--argus-color-queued-strong);
+  --color-queued-solid: var(--argus-color-queued-solid);
+  --color-queued-solid-hover: var(--argus-color-queued-solid-hover);
+  --color-queued-on-solid: var(--argus-color-queued-on-solid);
+
+  --color-running-subtle: var(--argus-color-running-subtle);
+  --color-running-border: var(--argus-color-running-border);
+  --color-running: var(--argus-color-running);
+  --color-running-strong: var(--argus-color-running-strong);
+  --color-running-solid: var(--argus-color-running-solid);
+  --color-running-solid-hover: var(--argus-color-running-solid-hover);
+  --color-running-on-solid: var(--argus-color-running-on-solid);
+
+  --color-pass-subtle: var(--argus-color-pass-subtle);
+  --color-pass-border: var(--argus-color-pass-border);
+  --color-pass: var(--argus-color-pass);
+  --color-pass-strong: var(--argus-color-pass-strong);
+  --color-pass-solid: var(--argus-color-pass-solid);
+  --color-pass-solid-hover: var(--argus-color-pass-solid-hover);
+  --color-pass-on-solid: var(--argus-color-pass-on-solid);
+
+  --color-fail-subtle: var(--argus-color-fail-subtle);
+  --color-fail-border: var(--argus-color-fail-border);
+  --color-fail: var(--argus-color-fail);
+  --color-fail-strong: var(--argus-color-fail-strong);
+  --color-fail-solid: var(--argus-color-fail-solid);
+  --color-fail-solid-hover: var(--argus-color-fail-solid-hover);
+  --color-fail-on-solid: var(--argus-color-fail-on-solid);
+
+  --color-timeout-subtle: var(--argus-color-timeout-subtle);
+  --color-timeout-border: var(--argus-color-timeout-border);
+  --color-timeout: var(--argus-color-timeout);
+  --color-timeout-strong: var(--argus-color-timeout-strong);
+  --color-timeout-solid: var(--argus-color-timeout-solid);
+  --color-timeout-solid-hover: var(--argus-color-timeout-solid-hover);
+  --color-timeout-on-solid: var(--argus-color-timeout-on-solid);
+
+  --color-retry-subtle: var(--argus-color-retry-subtle);
+  --color-retry-border: var(--argus-color-retry-border);
+  --color-retry: var(--argus-color-retry);
+  --color-retry-strong: var(--argus-color-retry-strong);
+  --color-retry-solid: var(--argus-color-retry-solid);
+  --color-retry-solid-hover: var(--argus-color-retry-solid-hover);
+  --color-retry-on-solid: var(--argus-color-retry-on-solid);
+
+  --color-cancelled-subtle: var(--argus-color-cancelled-subtle);
+  --color-cancelled-border: var(--argus-color-cancelled-border);
+  --color-cancelled: var(--argus-color-cancelled);
+  --color-cancelled-strong: var(--argus-color-cancelled-strong);
+  --color-cancelled-solid: var(--argus-color-cancelled-solid);
+  --color-cancelled-solid-hover: var(--argus-color-cancelled-solid-hover);
+  --color-cancelled-on-solid: var(--argus-color-cancelled-on-solid);
+
+  /* Overlay & Dark Code Surface */
+  --color-overlay: var(--argus-color-overlay);
+  --color-code: var(--argus-color-code-surface);
+  --color-code-header: var(--argus-color-code-header);
+  --color-code-border: var(--argus-color-code-border);
+  --color-code-text: var(--argus-color-code-text);
+  --color-code-muted: var(--argus-color-code-muted);
+  --color-code-dim: var(--argus-color-code-dim);
+  --color-code-hover: var(--argus-color-code-hover);
+
+  /* Typography — Argus additions only.
+     Tailwind's own text-xs/sm/base/lg/xl are intentionally left untouched:
+     they are already load-bearing across the app, and redefining them here
+     would silently rescale every existing usage. */
+  --text-micro: 0.6875rem;
+  --text-2xs: 0.625rem;
+  --text-micro--line-height: 1rem;
+  --text-2xs--line-height: 0.875rem;
+
+  /* Container Scale */
+  --container-sidebar: 208px;
+  --container-content: 1600px;
+  --container-modal: 560px;
+  --container-modal-lg: 720px;
+  --container-drawer: 480px;
+  --container-col-3xs: 84px;
+  --container-col-2xs: 118px;
+  --container-col-xs: 136px;
+  --container-col-sm: 144px;
+  --container-col-md: 155px;
+  --container-col-lg: 170px;
+  --container-col-xl: 180px;
+  --container-table-lg: 1132px;
+  --container-table-xl: 1200px;
+
+  /* Elevation Scale — mirrors design-system/tokens/elevation.ts. Declared
+     here so `shadow-lg` on an overlay is the Argus step rather than
+     Tailwind's, which is roughly twice the blur at a quarter of the
+     restraint. Asserted by design-system/__tests__/elevationScale.test.ts. */
+  --shadow-xs: var(--argus-shadow-xs);
+  --shadow-sm: var(--argus-shadow-sm);
+  --shadow-md: var(--argus-shadow-md);
+  --shadow-lg: var(--argus-shadow-lg);
+
+  /* Radius Scale — mirrors design-system/tokens/elevation.ts */
+  --radius-xs: var(--argus-radius-xs);
+  --radius-sm: var(--argus-radius-sm);
+  --radius-md: var(--argus-radius-md);
+  --radius-lg: var(--argus-radius-lg);
+  --radius-xl: var(--argus-radius-xl);
+  --radius-full: var(--argus-radius-full);
 }
 
 @layer base {
@@ -41,7 +164,38 @@
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    @apply outline-2 outline-solid outline-focus outline-offset-2;
+    /* WCAG 2.2 SC 2.4.11 Focus Appearance. Geometry lives in tokens/spacing.ts
+       (`focusRing`) and is asserted by design-system/__tests__/a11y.test.ts;
+       the colour is `focus`, held to 3:1 by contrast.test.ts. */
+    outline: var(--argus-focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--argus-focus-ring-offset);
+  }
+
+  /* WCAG 2.2 SC 2.2.2 Pause, Stop, Hide.
+
+     The console animated unconditionally: a loading spinner that can run
+     indefinitely, a popover that slides up and scales in, a progress segment
+     that pulses. A user who asks the OS to reduce motion was ignored.
+
+     Durations collapse to ~0 rather than being removed, so an element that
+     animates in still ends up in its final state and stays visible. The
+     `!important` is deliberate — this has to beat utility classes, which is
+     the whole point of putting it here rather than at each call site.
+
+     Nothing is lost: every animation in the console is paired with a text
+     label (LoadingState always takes a message, the refresh buttons have
+     names, the running badge carries a count), so the status survives without
+     the movement. Asserted by e2e/a11y.spec.ts under emulated
+     `prefers-reduced-motion: reduce`. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -55,7 +209,7 @@
   }
 
   .ui-button--primary {
-    @apply bg-primary text-white hover:bg-primary-hover;
+    @apply bg-primary text-foreground-inverse hover:bg-primary-hover;
   }
 
   .ui-button--secondary {
@@ -63,11 +217,18 @@
   }
 
   .ui-button--danger {
-    @apply border border-rose-200 bg-surface text-rose-700 hover:bg-rose-50;
+    @apply border border-fail-border bg-surface text-fail hover:bg-fail-subtle;
   }
 
   .ui-button--warning {
-    @apply border border-amber-200 bg-surface text-amber-800 hover:bg-amber-50;
+    @apply border border-timeout-border bg-surface text-timeout hover:bg-timeout-subtle;
+  }
+
+  /* Filled warning, for the primary action of a warning-level dialog. The
+     filled family carries a label, so it is bound to `onSolid` at 4.5:1 —
+     see design-system/tokens/contrast.ts. */
+  .ui-button--warning-solid {
+    @apply bg-timeout-solid text-timeout-on-solid hover:bg-timeout-solid-hover;
   }
 
   .ui-button--quiet {
@@ -103,27 +264,58 @@
   }
 
   .ui-badge {
-    @apply inline-flex min-h-5 items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4;
+    @apply inline-flex min-h-5 items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-micro font-medium leading-4;
+  }
+
+  /* Icon-only control. The 32px box clears WCAG 2.2 SC 2.5.8 Target Size
+     (Minimum) with room to spare over the 16px glyph, and `IconButton`
+     requires an accessible name so the control is never unlabelled. */
+  .ui-icon-button {
+    @apply inline-flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors cursor-pointer;
+  }
+
+  .ui-icon-button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .ui-icon-button--quiet {
+    @apply text-muted-foreground hover:bg-surface-muted hover:text-foreground;
+  }
+
+  .ui-icon-button--danger {
+    @apply text-muted-foreground hover:bg-fail-subtle hover:text-fail;
   }
 
   .ui-badge--neutral {
     @apply border-border bg-surface-muted text-foreground-secondary;
   }
 
-  .ui-badge--info {
-    @apply border-sky-200 bg-sky-50 text-sky-800;
+  .ui-badge--queued {
+    @apply border-queued-border bg-queued-subtle text-queued;
   }
 
-  .ui-badge--success {
-    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+  .ui-badge--running {
+    @apply border-running-border bg-running-subtle text-running;
   }
 
-  .ui-badge--warning {
-    @apply border-amber-200 bg-amber-50 text-amber-800;
+  .ui-badge--pass {
+    @apply border-pass-border bg-pass-subtle text-pass;
   }
 
-  .ui-badge--danger {
-    @apply border-rose-200 bg-rose-50 text-rose-800;
+  .ui-badge--fail {
+    @apply border-fail-border bg-fail-subtle text-fail;
+  }
+
+  .ui-badge--timeout {
+    @apply border-timeout-border bg-timeout-subtle text-timeout;
+  }
+
+  .ui-badge--retry {
+    @apply border-retry-border bg-retry-subtle text-retry;
+  }
+
+  .ui-badge--cancelled {
+    @apply border-cancelled-border bg-cancelled-subtle text-cancelled;
   }
 
   .ui-table-shell {
@@ -135,7 +327,7 @@
   }
 
   .ui-table thead {
-    @apply bg-surface-muted text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+    @apply bg-surface-muted text-micro font-semibold uppercase tracking-wide text-muted-foreground;
   }
 
   .ui-table th {

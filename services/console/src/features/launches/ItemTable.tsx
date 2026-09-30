@@ -112,7 +112,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
       {/* Table */}
       <Panel className="ui-table-shell">
         <div className="overflow-x-auto">
-          <table className="ui-table min-w-[1200px] text-sm text-foreground-secondary">
+          <table className="ui-table min-w-table-xl text-sm text-foreground-secondary">
             <thead className="bg-canvas/75 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               <tr>
                 <th className="px-5 py-3.5">用例标识 (Dataset Item ID)</th>
@@ -138,13 +138,13 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                       <div className="flex items-center gap-1.5">
                         <span>{item.dataset_item_id}</span>
                         {item.dispatch_generation && item.dispatch_generation > 1 && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary-subtle text-primary-strong border border-primary-border">
+                          <span className="px-1.5 py-0.2 rounded text-2xs font-semibold bg-primary-subtle text-primary-strong border border-primary-border">
                             gen #{item.dispatch_generation}
                           </span>
                         )}
                       </div>
                       {errorText && (
-                        <p className="text-[11px] text-rose-600 font-normal truncate max-w-xs mt-0.5" title={errorText}>
+                        <p className="text-micro text-fail font-normal truncate max-w-xs mt-0.5" title={errorText}>
                           {errorText}
                         </p>
                       )}
@@ -164,16 +164,16 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                           {Object.entries(item.scores).map(([k, v]) => (
                             <span
                               key={k}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-surface-muted text-foreground-secondary border border-border"
+                              className="inline-flex items-center px-2 py-0.5 rounded text-micro font-mono bg-surface-muted text-foreground-secondary border border-border"
                             >
                               <span className="text-muted-foreground mr-1">{k}:</span>
                               <span
                                 className={`font-semibold ${
                                   Number(v) >= 1
-                                    ? "text-emerald-700"
+                                    ? "text-pass-strong"
                                     : Number(v) > 0
-                                    ? "text-amber-600"
-                                    : "text-rose-600"
+                                    ? "text-timeout"
+                                    : "text-fail"
                                 }`}
                               >
                                 {typeof v === "number" ? v.toFixed(2) : String(v)}
@@ -192,8 +192,8 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items }) => {
                           className={`font-semibold ${
                             item.final_attempt_http_status >= 200 &&
                             item.final_attempt_http_status < 300
-                              ? "text-emerald-600"
-                              : "text-rose-600"
+                              ? "text-pass"
+                              : "text-fail"
                           }`}
                         >
                           {item.final_attempt_http_status}
