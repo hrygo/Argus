@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "services" / "eval-runner"))
 
 from app.aggregation import aggregate_run  # noqa: E402
 from app.costs import aggregate_attempt_costs, compare_costs, extract_usage_cost  # noqa: E402
+from app.models import ComparisonResponse, RunSummaryResponse  # noqa: E402
 
 MAPPING = {
     "input_tokens_path": "usage.input_tokens",
@@ -166,3 +167,77 @@ def test_absent_cost_is_unavailable_but_explicit_zero_is_valid():
     assert zero["total_cost"] == 0
     assert zero["cost_coverage"] == 1
     assert zero["cost_unavailable_reason"] is None
+
+
+def test_attempt_cost_evidence_only_has_unavailable_reason_when_cost_is_missing():
+    def attempt_evidence(usage_cost=None):
+        attempt = {"id": "attempt-1", "attempt_no": 1, "dispatch_generation": 0}
+        if usage_cost is not None:
+            attempt["usage_cost"] = usage_cost
+        return aggregate_attempt_costs([attempt])["cost_evidence"]["attempts"][0]
+
+    positive = attempt_evidence({"cost": {
+        "amount": "0.01",
+        "currency": "USD",
+        "source": "provider_reported",
+        "measurement_scope": "agent_invocation_total",
+        "unavailable_reason": None,
+    }})
+    assert positive["amount"] == "0.01"
+    assert positive["unavailable_reason"] is None
+
+    zero = attempt_evidence({"cost": {
+        "amount": "0",
+        "currency": "USD",
+        "source": "provider_reported",
+        "measurement_scope": "agent_invocation_total",
+        "unavailable_reason": None,
+    }})
+    assert zero["amount"] == "0"
+    assert zero["unavailable_reason"] is None
+
+    missing = attempt_evidence()
+    assert missing["amount"] is None
+    assert missing["unavailable_reason"] == "COST_NOT_RECORDED"
+
+
+def test_cost_summary_response_fields_are_explicit_and_typed_in_schema():
+    run_schema = RunSummaryResponse.model_json_schema()
+    run_summary_ref = run_schema["properties"]["summary"]["$ref"]
+    run_summary_name = run_summary_ref.rsplit("/", 1)[1]
+    run_cost_fields = run_schema["$defs"][run_summary_name]["properties"]
+    assert run_cost_fields["cost_per_case"]["anyOf"][0]["type"] == "number"
+    assert run_cost_fields["cost_per_case"]["anyOf"][1]["type"] == "null"
+    assert run_cost_fields["cost_coverage"]["anyOf"][0]["type"] == "number"
+    run_reason_schema = run_cost_fields["cost_unavailable_reason"]
+    assert any(option.get("type") == "null" for option in run_reason_schema["anyOf"])
+    run_reason_ref = next(option["$ref"] for option in run_reason_schema["anyOf"] if "$ref" in option)
+    run_reason_name = run_reason_ref.rsplit("/", 1)[1]
+    assert set(run_schema["$defs"][run_reason_name]["enum"]) == {
+        "COST_NOT_RECORDED", "INVALID_COST_EVIDENCE", "INCOMPLETE_ATTEMPT_COST",
+        "MIXED_CURRENCIES", "COST_SOURCE_MISMATCH", "COST_SCOPE_MISMATCH",
+        "COST_POLICY_MISMATCH", "PARTIAL_COST_COVERAGE",
+    }
+
+    comparison_schema = ComparisonResponse.model_json_schema()
+    comparison_summary_ref = comparison_schema["properties"]["summary"]["$ref"]
+    comparison_summary_name = comparison_summary_ref.rsplit("/", 1)[1]
+    comparison_fields = comparison_schema["$defs"][comparison_summary_name]["properties"]
+    cost_comparison_ref = comparison_fields["cost_comparison"]["$ref"]
+    cost_comparison_name = cost_comparison_ref.rsplit("/", 1)[1]
+    cost_comparison_fields = comparison_schema["$defs"][cost_comparison_name]["properties"]
+    assert set(comparison_schema["$defs"][cost_comparison_name]["required"]) == set(cost_comparison_fields)
+    status_ref = cost_comparison_fields["status"]["$ref"]
+    status_name = status_ref.rsplit("/", 1)[1]
+    assert set(comparison_schema["$defs"][status_name]["enum"]) == {"COMPARABLE", "NOT_COMPARABLE"}
+    reason_schema = cost_comparison_fields["reason"]
+    assert any(option.get("type") == "null" for option in reason_schema["anyOf"])
+    reason_ref = next(option["$ref"] for option in reason_schema["anyOf"] if "$ref" in option)
+    reason_name = reason_ref.rsplit("/", 1)[1]
+    assert set(comparison_schema["$defs"][reason_name]["enum"]) == {
+        "COST_NOT_RECORDED", "INVALID_COST_EVIDENCE", "INCOMPLETE_ATTEMPT_COST",
+        "MIXED_CURRENCIES", "COST_SOURCE_MISMATCH", "COST_SCOPE_MISMATCH",
+        "COST_POLICY_MISMATCH", "PARTIAL_COST_COVERAGE", "COST_CURRENCY_MISMATCH",
+        "BASELINE_NOT_BOUND", "NO_COMPARABLE_CASES",
+    }
+    assert "cost_comparison" in comparison_schema["$defs"][comparison_summary_name]["required"]

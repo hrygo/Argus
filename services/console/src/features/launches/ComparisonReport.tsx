@@ -19,7 +19,10 @@ type FrozenVersions = {
   environment?: string;
 };
 type RunSummary = Omit<GeneratedRunSummary, "versions"> & { versions: FrozenVersions };
-type RunMetrics = {
+type GeneratedRunMetrics = GeneratedRunSummary["summary"];
+type CostReason = NonNullable<GeneratedRunMetrics["cost_unavailable_reason"]>
+  | NonNullable<GeneratedComparison["summary"]["cost_comparison"]["reason"]>;
+type RunMetrics = GeneratedRunMetrics & {
   pass_rate?: number | null;
   evaluation_coverage?: number | null;
   critical_failure_count?: number | null;
@@ -27,34 +30,14 @@ type RunMetrics = {
   execution_error_rate?: number | null;
   evaluator_error_count?: number | null;
   p95_latency_ms?: number | null;
-  cost_per_case?: number | null;
-  total_cost?: number | null;
-  cost_currency?: string | null;
-  cost_case_count?: number;
-  cost_coverage?: number | null;
-  cost_unavailable_reason?: string | null;
   score_means?: Record<string, number | null>;
   total_cases?: number;
   evaluated_cases?: number;
 };
-type ComparisonSummary = {
-  candidate?: RunMetrics;
-  baseline?: RunMetrics | null;
-  comparable_case_count?: number;
-  classification_counts?: Record<string, number>;
-  comparable_cohort?: { baseline: RunMetrics; candidate: RunMetrics } | null;
-  cost_comparison?: {
-    status: string;
-    reason?: string | null;
-    cohort?: string;
-    case_count?: number;
-    currency?: string | null;
-    baseline_cost_per_case?: number | null;
-    candidate_cost_per_case?: number | null;
-    delta?: number | null;
-    baseline_coverage?: number | null;
-    candidate_coverage?: number | null;
-  } | null;
+type ComparisonSummary = GeneratedComparison["summary"] & {
+  candidate: RunMetrics;
+  baseline: RunMetrics | null;
+  comparable_cohort: { baseline: RunMetrics; candidate: RunMetrics } | null;
 };
 type ComparisonItem = {
   dataset_item_id?: string | null;
@@ -68,11 +51,9 @@ type ComparisonItem = {
   baseline_experiment_url?: string | null;
   candidate_experiment_url?: string | null;
 };
-type Comparison = Omit<GeneratedComparison, "versions" | "summary" | "items" | "classification_counts"> & {
+type Comparison = Omit<GeneratedComparison, "versions" | "items"> & {
   versions: { baseline: FrozenVersions | null; candidate: FrozenVersions };
-  summary: ComparisonSummary;
   items: ComparisonItem[];
-  classification_counts: Record<string, number>;
   next_cursor?: number | null;
 };
 
@@ -108,7 +89,7 @@ const costCoverage = (metrics: RunMetrics | null | undefined) => {
   const total = metrics.total_cases == null ? "?" : String(metrics.total_cases);
   return `${covered}/${total} (${percent(metrics.cost_coverage)})`;
 };
-const costReasonText: Record<string, string> = {
+const costReasonText: Record<CostReason, string> = {
   BASELINE_NOT_BOUND: "尚未绑定 Baseline，暂不能计算成本差值。",
   COST_NOT_RECORDED: "未记录成本的 Case 不按 0 计入。",
   INVALID_COST_EVIDENCE: "存在无效成本证据，成本暂不可比较。",
@@ -316,6 +297,11 @@ export const ComparisonReport: React.FC<{
     { label: "Run Cost / Case", baseline: money(fullRunBaseline?.cost_per_case, fullRunBaseline?.cost_currency), candidate: money(fullRunCandidate.cost_per_case, fullRunCandidate.cost_currency), delta: "—" },
     { label: "Run Cost Coverage", baseline: costCoverage(fullRunBaseline), candidate: costCoverage(fullRunCandidate), delta: "—" },
   ] : [];
+  const costExplanations = [
+    { label: "全量 Baseline", reason: fullRunBaseline?.cost_unavailable_reason },
+    { label: "全量 Candidate", reason: fullRunCandidate?.cost_unavailable_reason },
+    { label: "共同可比 Case", reason: comparisonSummary?.cost_comparison?.reason },
+  ].filter((entry): entry is { label: string; reason: CostReason } => entry.reason != null);
 
   if (!canReadResults) return null;
 
@@ -391,9 +377,13 @@ export const ComparisonReport: React.FC<{
           ) : comparisonSummary && (
             <p className="rounded border border-border p-3 text-xs text-muted-foreground">无可比样本，质量差异未计算。</p>
           )}
-          {comparisonSummary?.cost_comparison?.reason && (
+          {costExplanations.length > 0 && (
             <p role="status" className="rounded border border-border p-3 text-xs text-muted-foreground">
-              成本说明：{costReasonText[comparisonSummary.cost_comparison.reason] ?? comparisonSummary.cost_comparison.reason}
+              {costExplanations.map(({ label, reason }) => (
+                <span key={label} className="block">
+                  {label} 成本说明：{costReasonText[reason] ?? reason}
+                </span>
+              ))}
             </p>
           )}
         </div>

@@ -124,15 +124,16 @@ def aggregate_attempt_costs(attempts: list[Any]) -> dict[str, Any]:
         source = cost.get("source") if isinstance(cost, Mapping) else None
         scope = cost.get("measurement_scope") if isinstance(cost, Mapping) else None
         reason = cost.get("unavailable_reason") if isinstance(cost, Mapping) else "COST_NOT_RECORDED"
-        if (
+        valid_cost = (
             amount is not None
             and isinstance(currency, str)
             and _CURRENCY.fullmatch(currency)
             and isinstance(source, str)
             and source in _COST_SOURCES
             and isinstance(scope, str)
-            and scope
-        ):
+            and bool(scope)
+        )
+        if valid_cost:
             parsed.append((amount, currency, source, scope))
             reason = None
         evidence.append({
@@ -147,7 +148,7 @@ def aggregate_attempt_costs(attempts: list[Any]) -> dict[str, Any]:
                 key: _token(usage.get(key)) if isinstance(usage, Mapping) else None
                 for key in ("input_tokens", "output_tokens", "total_tokens")
             },
-            "unavailable_reason": reason or "COST_NOT_RECORDED",
+            "unavailable_reason": None if valid_cost else reason or "COST_NOT_RECORDED",
         })
 
     complete = bool(selected) and len(parsed) == len(selected)

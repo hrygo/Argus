@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -353,6 +354,89 @@ class BaselineResponse(BaseModel):
     summary: dict[str, Any]
 
 
+class RunCostUnavailableReason(StrEnum):
+    COST_NOT_RECORDED = "COST_NOT_RECORDED"
+    INVALID_COST_EVIDENCE = "INVALID_COST_EVIDENCE"
+    INCOMPLETE_ATTEMPT_COST = "INCOMPLETE_ATTEMPT_COST"
+    MIXED_CURRENCIES = "MIXED_CURRENCIES"
+    COST_SOURCE_MISMATCH = "COST_SOURCE_MISMATCH"
+    COST_SCOPE_MISMATCH = "COST_SCOPE_MISMATCH"
+    COST_POLICY_MISMATCH = "COST_POLICY_MISMATCH"
+    PARTIAL_COST_COVERAGE = "PARTIAL_COST_COVERAGE"
+
+
+class CostComparisonReason(StrEnum):
+    COST_NOT_RECORDED = "COST_NOT_RECORDED"
+    INVALID_COST_EVIDENCE = "INVALID_COST_EVIDENCE"
+    INCOMPLETE_ATTEMPT_COST = "INCOMPLETE_ATTEMPT_COST"
+    MIXED_CURRENCIES = "MIXED_CURRENCIES"
+    COST_SOURCE_MISMATCH = "COST_SOURCE_MISMATCH"
+    COST_SCOPE_MISMATCH = "COST_SCOPE_MISMATCH"
+    COST_POLICY_MISMATCH = "COST_POLICY_MISMATCH"
+    PARTIAL_COST_COVERAGE = "PARTIAL_COST_COVERAGE"
+    COST_CURRENCY_MISMATCH = "COST_CURRENCY_MISMATCH"
+    BASELINE_NOT_BOUND = "BASELINE_NOT_BOUND"
+    NO_COMPARABLE_CASES = "NO_COMPARABLE_CASES"
+
+
+class CostComparisonStatus(StrEnum):
+    COMPARABLE = "COMPARABLE"
+    NOT_COMPARABLE = "NOT_COMPARABLE"
+
+
+class RunCostSummaryResponse(BaseModel):
+    """Typed cost portion of a frozen run summary; retain other metrics for compatibility."""
+
+    model_config = ConfigDict(extra="allow")
+
+    total_cost: float | None = None
+    cost_per_case: float | None = None
+    cost_currency: str | None = None
+    cost_case_count: int | None = None
+    cost_coverage: float | None = None
+    cost_source: str | None = None
+    cost_scope: str | None = None
+    cost_policy_version: str | None = None
+    cost_partial: bool | None = None
+    cost_unavailable_reason: RunCostUnavailableReason | None = None
+
+
+class CostComparisonResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    status: CostComparisonStatus
+    reason: CostComparisonReason | None
+    cohort: Literal["quality_comparable_cases"]
+    case_count: int
+    currency: str | None
+    baseline_cost_per_case: float | None
+    candidate_cost_per_case: float | None
+    delta: float | None
+    baseline_coverage: float | None
+    candidate_coverage: float | None
+    policy_version: str | None
+
+
+class ComparableCohortResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    baseline: RunCostSummaryResponse
+    candidate: RunCostSummaryResponse
+
+
+class ComparisonSummaryResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    candidate: RunCostSummaryResponse
+    baseline: RunCostSummaryResponse | None
+    comparable_case_count: int
+    classification_counts: dict[str, int]
+    comparable_cohort: ComparableCohortResponse | None
+    cost_comparison: CostComparisonResponse
+    pass_rate_delta: float | None
+    score_mean_deltas: dict[str, float]
+
+
 class RunSummaryResponse(BaseModel):
     launch_id: str
     snapshot_id: str
@@ -360,7 +444,7 @@ class RunSummaryResponse(BaseModel):
     created_at: datetime
     manifest_digest: str
     versions: dict[str, Any]
-    summary: dict[str, Any]
+    summary: RunCostSummaryResponse
     langfuse_score_sync_status: str = "PENDING"
 
 
@@ -370,7 +454,7 @@ class ComparisonResponse(BaseModel):
     baseline_snapshot_id: str | None = None
     baseline_binding_revision: int | None = None
     versions: dict[str, Any]
-    summary: dict[str, Any]
+    summary: ComparisonSummaryResponse
     classification_counts: dict[str, int]
     items: list[dict[str, Any]]
     next_cursor: int | None = None

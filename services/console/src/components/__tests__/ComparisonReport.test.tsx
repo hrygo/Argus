@@ -147,12 +147,14 @@ describe("ComparisonReport", () => {
   let queryClient: QueryClient;
   let latestSummaryReads: number;
   let costReason: string | null;
+  let fullRunCostUnavailable: boolean;
 
   beforeEach(() => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.clearAllMocks();
     latestSummaryReads = 0;
     costReason = null;
+    fullRunCostUnavailable = false;
     window.history.replaceState({}, "", "/launches/candidate-launch");
     (api.GET as any).mockImplementation((path: string, options: any) => {
       const launchId = options.params.path.launch_id;
@@ -176,6 +178,14 @@ describe("ComparisonReport", () => {
         const page = cursor === 0
           ? comparisonPage(snapshotId, "case-1", 1, launchId)
           : comparisonPage(snapshotId, "case-2", null, launchId);
+        if (fullRunCostUnavailable) {
+          for (const run of [page.summary.baseline, page.summary.candidate]) {
+            run.total_cost = null;
+            run.cost_per_case = null;
+            run.cost_currency = null;
+            run.cost_unavailable_reason = "MIXED_CURRENCIES";
+          }
+        }
         if (costReason) {
           page.summary.cost_comparison = { ...page.summary.cost_comparison, status: "NOT_COMPARABLE", reason: costReason, delta: null };
           if (costReason === "PARTIAL_COST_COVERAGE") {
@@ -265,6 +275,21 @@ describe("ComparisonReport", () => {
     expect(row).toHaveTextContent("—");
     expect(within(aggregateTable).getByRole("row", { name: /Cost Coverage/ })).toHaveTextContent("0/8 (0.0%)");
     expect(await screen.findByText(/成本说明：/)).toHaveTextContent("未记录成本的 Case 不按 0 计入");
+  });
+
+  it("explains full-run mixed currencies without hiding comparable-cohort costs", async () => {
+    fullRunCostUnavailable = true;
+    renderReport();
+
+    const aggregateTable = await screen.findByRole("table", { name: "Baseline 与 Candidate 聚合指标对比" });
+    expect(within(aggregateTable).getByRole("row", { name: /Cost \/ Case/ })).toHaveTextContent("-$0.004");
+    expect(within(aggregateTable).getByRole("row", { name: /Cost Coverage/ })).toHaveTextContent("8/8 (100.0%)");
+
+    const fullRunTable = screen.getByRole("table", { name: "Baseline 与 Candidate 全量运行健康指标" });
+    expect(within(fullRunTable).getByRole("row", { name: /Run Cost \/ Case/ })).toHaveTextContent("—");
+    expect(within(fullRunTable).getByRole("row", { name: /Run Cost Coverage/ })).toHaveTextContent("10/10 (100.0%)");
+    expect(await screen.findByText(/全量 Baseline 成本说明：/)).toHaveTextContent("存在多种币种");
+    expect(await screen.findByText(/全量 Candidate 成本说明：/)).toHaveTextContent("存在多种币种");
   });
 
   it("loads an explicitly pinned historical snapshot while a retry is running", async () => {
