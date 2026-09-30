@@ -218,17 +218,25 @@ def test_i18n_workflow_filters_changes_and_publishes_ghcr_image() -> None:
     assert action(metadata)[0] == "docker/metadata-action"
     assert metadata["with"]["images"] == "ghcr.io/minicem/argus-langfuse-i18n"
 
-    # The two attestation permissions exist to sign the image; if the
-    # provenance step is ever dropped they become an unjustified grant.
-    assert any(
-        step.get("with", {}).get("provenance") == "mode=max" for step in steps
-    ), "image job grants attestation permissions but never signs the image"
-
     login = next(step for step in steps if step.get("name") == "Log in to GHCR")
     assert login["if"] == "github.event_name != 'pull_request'"
     assert login["with"]["password"] == "${{ secrets.GITHUB_TOKEN }}"
 
     build = next(step for step in steps if step.get("id") == "build")
+    # The two attestation permissions exist to sign the published image; if the
+    # provenance step is ever dropped they become an unjustified grant. Signing
+    # is asserted per event rather than by scanning for a literal, because the
+    # two paths use different exporters: push publishes via the OCI exporter
+    # (attestation -> manifest list, supported), while pull_request builds with
+    # load:true (docker exporter, which cannot export a manifest list and would
+    # fail the whole job). Asserting only "some step mentions mode=max" would
+    # have let the PR-breaking combination through.
+    assert build["with"]["provenance"] == (
+        "${{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}"
+    )
+    assert build["with"]["sbom"] == (
+        "${{ github.event_name != 'pull_request' && 'true' || 'false' }}"
+    )
     qemu = next(
         step
         for step in steps
