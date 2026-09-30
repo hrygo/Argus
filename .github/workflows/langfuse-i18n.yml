@@ -194,8 +194,11 @@ jobs:
             NEXT_PUBLIC_BUILD_ID=argus-i18n-${{ github.sha }}
           cache-from: type=gha,scope=langfuse-i18n
           cache-to: type=gha,mode=max,scope=langfuse-i18n
-          provenance: mode=max
-          sbom: true
+          # SLSA provenance 与 SBOM 只在真正发布镜像时生成：PR 走 load:true
+          # （docker exporter），而 docker exporter 无法导出 attestation 造成的
+          # manifest list，会直接构建失败。发布路径用 OCI exporter 不受此限制。
+          provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || 'false' }}
+          sbom: ${{ github.event_name != 'pull_request' && 'true' || 'false' }}
 
       - name: Record image identity
         shell: bash
