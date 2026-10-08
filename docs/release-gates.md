@@ -62,3 +62,5 @@ Gate 返回固定修订的报告链接、策略摘要、候选与基线 Snapshot
 门禁引擎 v3 要求 Dataset / Agent / Evaluator / Runner 四类冻结身份完整，并要求候选和参与比较的 Baseline 明确冻结规范化的 environment；缺失或使用动态版本引用时返回 UNKNOWN，不能将缺失环境推定为 production。Runner build identity 复用既有可靠性校验。新引擎重新评估时不会复用旧引擎的 PASS，旧 Gate 仍可按原 ID 查询。
 
 报告链接使用 ARGUS_CONSOLE_BASE_URL（默认 http://localhost:18083），需配置为浏览器可访问的 Console 根地址，不支持路径前缀；配置包含路径时返回 503，避免生成无法打开的报告链接。Runner 的 18080 端口提供 API。Compose 已转发此变量。
+
+CLI 幂等键上限为 128 字符，超长输入在任何 HTTP 请求前返回结构化 UNKNOWN（INVALID_IDEMPOTENCY_KEY）。CI 模板使用数值项目/流水线 ID 或稳定 SHA-256 摘要，避免长仓库或 Job 路径超过数据库限制。
