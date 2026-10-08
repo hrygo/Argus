@@ -125,7 +125,7 @@ Remote Agent Runner ── W3C Trace Context ──► 业务 Agent
 
 | 能力域 | 内容 |
 |---|---|
-| Agent Registry | PostgreSQL 持久化 `AgentDefinition` / `AgentVersion`；不可变版本；只保存 `credentialRef` |
+| Agent Registry | PostgreSQL 持久化 `AgentDefinition` / `AgentVersion`；不可变版本；选择稳定 Credential ID，Token 加密存储、运行时解析（[接入说明](docs/secret-providers.md)） |
 | Versioned Launch | 四维冻结 Manifest、Dataset 版本与内容校验、Idempotency-Key 与冲突检测、Launch 生命周期持久化 |
 | Remote Runner | `SYNC_HTTP` 调用、Request Mapping、timeout / retry / rate limit、W3C Trace Context 注入、逐次 Attempt 记录 |
 | 异步执行 | Redis Streams 队列 + Worker、可靠执行状态机、`cancel` / `resume` / `retry-failed`、分布式限流 |
@@ -191,6 +191,7 @@ Remote Agent Runner ── W3C Trace Context ──► 业务 Agent
 |---|---|
 | 领域模型、状态机、API 设计细节 | [TECHNICAL_DESIGN.md](./TECHNICAL_DESIGN.md) |
 | 完整 API 合约 | [docs/openapi.json](./docs/openapi.json) 或运行时的 `/docs` |
+| Agent 凭据管理 | [凭据 Provider 与部署边界](./docs/secret-providers.md) |
 | 端到端演示流程 | [walkthrough.md](./walkthrough.md) |
 | Langfuse `zh-CN` 镜像构建与发布 | [deploy/langfuse/README.md](./deploy/langfuse/README.md) |
 | 最近一次验证记录 | [VALIDATION_REPORT.md](./VALIDATION_REPORT.md) |
