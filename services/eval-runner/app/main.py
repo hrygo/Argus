@@ -16,6 +16,7 @@ from .api_baselines import router as baselines_router
 from .api_evaluators import router as evaluators_router
 from .api_launches import router as launches_router
 from .api_registry import router as registry_router
+from .api_release_gates import router as release_gates_router
 from .api_results import router as results_router
 from .api_system import router as system_router
 from .config import find_path, settings
@@ -242,6 +243,7 @@ app.include_router(launches_router)
 app.include_router(evaluators_router)
 app.include_router(baselines_router)
 app.include_router(results_router)
+app.include_router(release_gates_router)
 app.include_router(system_router)
 app.include_router(metrics_router)
 
